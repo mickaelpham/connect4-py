@@ -10,7 +10,7 @@ from connect4.api.tokens import (
     hash_refresh_token,
 )
 
-SECRET = "test-secret"
+SECRET = "test-secret-that-is-at-least-32-bytes!"
 
 
 @pytest.fixture(autouse=True)
