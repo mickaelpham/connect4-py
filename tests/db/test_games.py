@@ -11,12 +11,15 @@ from connect4.db.players import create_player
 
 
 async def _make_player(conn: asyncpg.Connection, username: str) -> asyncpg.Record:
-    return await create_player(conn, username, "hashed_pw")
+    player = await create_player(conn, username, "hashed_pw")
+    assert player is not None
+    return player
 
 
 async def test_create_game(db_conn: asyncpg.Connection) -> None:
     player = await _make_player(db_conn, "alice")
     game = await create_game(db_conn, player["id"])
+    assert game is not None
     assert game["player1_id"] == player["id"]
     assert game["player2_id"] is None
     assert game["status"] == "waiting"
@@ -28,7 +31,9 @@ async def test_join_game(db_conn: asyncpg.Connection) -> None:
     p1 = await _make_player(db_conn, "alice")
     p2 = await _make_player(db_conn, "bob")
     game = await create_game(db_conn, p1["id"])
+    assert game is not None
     updated = await join_game(db_conn, game["id"], p2["id"])
+    assert updated is not None
     assert updated["player2_id"] == p2["id"]
     assert updated["status"] == "in_progress"
 
@@ -36,6 +41,7 @@ async def test_join_game(db_conn: asyncpg.Connection) -> None:
 async def test_get_game_by_id(db_conn: asyncpg.Connection) -> None:
     player = await _make_player(db_conn, "alice")
     game = await create_game(db_conn, player["id"])
+    assert game is not None
     found = await get_game_by_id(db_conn, game["id"])
     assert found is not None
     assert found["id"] == game["id"]
@@ -50,8 +56,10 @@ async def test_update_game_status_won(db_conn: asyncpg.Connection) -> None:
     p1 = await _make_player(db_conn, "alice")
     p2 = await _make_player(db_conn, "bob")
     game = await create_game(db_conn, p1["id"])
+    assert game is not None
     await join_game(db_conn, game["id"], p2["id"])
     updated = await update_game_status(db_conn, game["id"], "won", p1["id"])
+    assert updated is not None
     assert updated["status"] == "won"
     assert updated["winner_id"] == p1["id"]
 
@@ -60,8 +68,10 @@ async def test_update_game_status_draw(db_conn: asyncpg.Connection) -> None:
     p1 = await _make_player(db_conn, "alice")
     p2 = await _make_player(db_conn, "bob")
     game = await create_game(db_conn, p1["id"])
+    assert game is not None
     await join_game(db_conn, game["id"], p2["id"])
     updated = await update_game_status(db_conn, game["id"], "draw")
+    assert updated is not None
     assert updated["status"] == "draw"
     assert updated["winner_id"] is None
 
@@ -71,6 +81,7 @@ async def test_list_player_games(db_conn: asyncpg.Connection) -> None:
     p2 = await _make_player(db_conn, "bob")
     await create_game(db_conn, p1["id"])
     game2 = await create_game(db_conn, p2["id"])
+    assert game2 is not None
     await join_game(db_conn, game2["id"], p1["id"])
 
     games = await list_player_games(db_conn, p1["id"])

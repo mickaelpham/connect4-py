@@ -10,7 +10,10 @@ async def _setup_game(conn: asyncpg.Connection) -> tuple[str, str, str]:
     """Create two players and an in-progress game. Returns (game_id, p1_id, p2_id)."""
     p1 = await create_player(conn, "alice", "hashed_pw")
     p2 = await create_player(conn, "bob", "hashed_pw")
+    assert p1 is not None
+    assert p2 is not None
     game = await create_game(conn, p1["id"])
+    assert game is not None
     await join_game(conn, game["id"], p2["id"])
     return game["id"], p1["id"], p2["id"]
 
@@ -18,6 +21,7 @@ async def _setup_game(conn: asyncpg.Connection) -> tuple[str, str, str]:
 async def test_create_move(db_conn: asyncpg.Connection) -> None:
     game_id, p1_id, _ = await _setup_game(db_conn)
     move = await create_move(db_conn, game_id, p1_id, column=3, move_number=1)
+    assert move is not None
     assert move["game_id"] == game_id
     assert move["player_id"] == p1_id
     assert move["column"] == 3

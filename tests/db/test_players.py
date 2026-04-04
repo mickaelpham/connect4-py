@@ -6,6 +6,7 @@ from connect4.db.players import create_player, get_player_by_id, get_player_by_u
 
 async def test_create_player(db_conn: asyncpg.Connection) -> None:
     player = await create_player(db_conn, "alice", "hashed_pw")
+    assert player is not None
     assert player["username"] == "alice"
     assert player["password_hash"] == "hashed_pw"
     assert len(player["id"]) == 26
@@ -21,6 +22,7 @@ async def test_create_player_duplicate_username(db_conn: asyncpg.Connection) -> 
 
 async def test_get_player_by_id(db_conn: asyncpg.Connection) -> None:
     player = await create_player(db_conn, "bob", "hashed_pw")
+    assert player is not None
     found = await get_player_by_id(db_conn, player["id"])
     assert found is not None
     assert found["username"] == "bob"
