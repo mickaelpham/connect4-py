@@ -39,14 +39,17 @@
 
 ## Phase 4: Authentication
 
-- [ ] Password hashing (bcrypt/argon2)
-- [ ] Player registration endpoint
-- [ ] Player login endpoint (JWT tokens)
-- [ ] Auth middleware/dependency for FastAPI
+- [x] Password hashing (argon2id via `argon2-cffi`)
+- [x] Player registration endpoint (`POST /register`)
+- [x] Player login endpoint (`POST /login`, JWT access tokens via PyJWT)
+- [x] Refresh token flow (`POST /refresh`, token rotation, DB-backed revocation)
+- [x] Auth middleware/dependency for FastAPI (`get_current_player`)
+- [x] Minimal FastAPI app setup with lifespan (pool management)
+- [x] Tests for auth layer — 21 tests (unit + DB + integration)
 
 ## Phase 5: API
 
-- [ ] FastAPI app setup
+- [x] FastAPI app setup (done in Phase 4)
 - [ ] `POST /games` — create a new game
 - [ ] `POST /games/{id}/join` — second player joins
 - [ ] `POST /games/{id}/moves` — play a move

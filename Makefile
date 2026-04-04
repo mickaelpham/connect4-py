@@ -1,4 +1,4 @@
-.PHONY: test lint format check db-up db-down migrate
+.PHONY: test lint format check db-up db-down migrate serve
 
 test:
 	uv run pytest
@@ -21,3 +21,6 @@ db-down:
 
 migrate:
 	uv run alembic upgrade head
+
+serve:
+	uv run uvicorn connect4.api.app:app --reload

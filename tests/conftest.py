@@ -3,10 +3,12 @@ import subprocess
 from collections.abc import AsyncGenerator
 
 import asyncpg
+import httpx
 import pytest_asyncio
 
 TEST_DSN = "postgresql://connect4:connect4@localhost:5432/connect4_test"
 TEST_DSN_ALEMBIC = "postgresql+psycopg://connect4:connect4@localhost:5432/connect4_test"
+TEST_JWT_SECRET = "test-secret-key-do-not-use-in-production"
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
@@ -46,3 +48,26 @@ async def db_conn(
     yield conn
     await tx.rollback()
     await db_pool.release(conn)
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def app_client(
+    db_pool: asyncpg.Pool,
+) -> AsyncGenerator[httpx.AsyncClient]:
+    os.environ["JWT_SECRET"] = TEST_JWT_SECRET
+
+    from fastapi import FastAPI
+
+    from connect4.api.auth import router as auth_router
+
+    test_app = FastAPI()
+    test_app.state.db_pool = db_pool
+    test_app.include_router(auth_router)
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=test_app),
+        base_url="http://test",
+    ) as client:
+        yield client
+
+
