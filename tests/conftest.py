@@ -37,7 +37,9 @@ async def db_pool() -> AsyncGenerator[asyncpg.Pool]:
 
 
 @pytest_asyncio.fixture(loop_scope="session")
-async def db_conn(db_pool: asyncpg.Pool) -> AsyncGenerator[asyncpg.Connection]:
+async def db_conn(
+    db_pool: asyncpg.Pool,
+) -> AsyncGenerator[asyncpg.pool.PoolConnectionProxy]:
     conn = await db_pool.acquire()
     tx = conn.transaction()
     await tx.start()
