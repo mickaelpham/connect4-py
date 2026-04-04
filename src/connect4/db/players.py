@@ -7,7 +7,7 @@ async def create_player(
     conn: asyncpg.Connection,
     username: str,
     password_hash: str,
-) -> asyncpg.Record:
+) -> asyncpg.Record | None:
     return await conn.fetchrow(
         """
         INSERT INTO players (id, username, password_hash)

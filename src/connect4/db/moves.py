@@ -9,7 +9,7 @@ async def create_move(
     player_id: str,
     column: int,
     move_number: int,
-) -> asyncpg.Record:
+) -> asyncpg.Record | None:
     return await conn.fetchrow(
         """
         INSERT INTO moves (id, game_id, player_id, "column", move_number)

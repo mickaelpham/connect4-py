@@ -6,7 +6,7 @@ from connect4.db.ulid import generate_ulid
 async def create_game(
     conn: asyncpg.Connection,
     player1_id: str,
-) -> asyncpg.Record:
+) -> asyncpg.Record | None:
     return await conn.fetchrow(
         """
         INSERT INTO games (id, player1_id, status)
@@ -22,7 +22,7 @@ async def join_game(
     conn: asyncpg.Connection,
     game_id: str,
     player2_id: str,
-) -> asyncpg.Record:
+) -> asyncpg.Record | None:
     return await conn.fetchrow(
         """
         UPDATE games
@@ -50,7 +50,7 @@ async def update_game_status(
     game_id: str,
     status: str,
     winner_id: str | None = None,
-) -> asyncpg.Record:
+) -> asyncpg.Record | None:
     return await conn.fetchrow(
         """
         UPDATE games
