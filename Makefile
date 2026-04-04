@@ -1,4 +1,4 @@
-.PHONY: test lint format check
+.PHONY: test lint format check db-up db-down migrate
 
 test:
 	uv run pytest
@@ -12,3 +12,12 @@ format:
 
 check: lint
 	uv run ruff format --check src tests
+
+db-up:
+	docker compose up -d
+
+db-down:
+	docker compose down
+
+migrate:
+	uv run alembic upgrade head

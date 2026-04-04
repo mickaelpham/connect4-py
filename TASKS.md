@@ -24,15 +24,18 @@
 
 ## Phase 3: Database & Storage
 
-- [ ] Docker Compose file for PostgreSQL
-- [ ] Alembic setup and initial migration
-- [ ] Schema: `players` table (id, username, password_hash, created_at, updated_at)
-- [ ] Schema: `games` table (id, player1_id, player2_id, status, winner_id, created_at, updated_at)
-- [ ] Schema: `moves` table (id, game_id, player_id, column, move_number, created_at, updated_at)
-- [ ] `created_at` defaults to `now()`, `updated_at` defaults to `now()` and updates on row change
-- [ ] Database connection pool (asyncpg)
-- [ ] Repository layer — raw SQL queries for players, games, moves
-- [ ] Tests for DB layer (`tests/db/`)
+- [x] Docker Compose file for PostgreSQL 17
+- [x] Alembic setup and initial migration (psycopg driver, `DATABASE_URL` env override)
+- [x] Schema: `players` table (id, username, password_hash, created_at, updated_at)
+- [x] Schema: `games` table (id, player1_id, player2_id, status, winner_id, created_at, updated_at)
+- [x] Schema: `moves` table (id, game_id, player_id, column, move_number, created_at)
+- [x] `created_at` defaults to `now()`, `updated_at` trigger on players and games (moves are immutable)
+- [x] ULID primary keys stored as `char(26)` via `python-ulid`
+- [x] Game status: `waiting` (player2 not joined), `in_progress`, `won`, `draw`
+- [x] Database connection pool (asyncpg, min=2, max=10)
+- [x] Repository layer — plain async functions with raw SQL (players, games, moves)
+- [x] Tests for DB layer (`tests/db/`) — 18 tests, transaction rollback isolation
+- [x] Makefile targets: `db-up`, `db-down`, `migrate`
 
 ## Phase 4: Authentication
 
