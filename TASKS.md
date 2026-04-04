@@ -11,14 +11,16 @@
 
 ## Phase 2: Core Game Logic (pure Python, no dependencies)
 
-- [ ] `Board` class — 7×6 grid, drop piece in column, check full column, get cell
-- [ ] Win detection — horizontal, vertical, diagonal (both directions)
-- [ ] Draw detection — board full with no winner
-- [ ] `Game` class — event-sourced: stores list of moves, derives board state
-  - [ ] `play(column)` — validate turn, drop piece, check win/draw
-  - [ ] `replay()` — rebuild board from move history
-  - [ ] Game status tracking: waiting, in_progress, won, draw
-- [ ] Tests for all core logic (`tests/core/`)
+- [x] `Board` class — 7×6 grid, drop piece in column, check full column, get cell
+- [x] Win detection — horizontal, vertical, diagonal (both directions)
+- [x] Draw detection — board full with no winner
+- [x] `Game` class — event-sourced: stores list of moves, derives board state
+  - [x] `play(column)` — validate turn, drop piece, check win/draw
+  - [x] `replay()` — rebuild board from move history
+  - [x] Game status tracking: in_progress, won, draw (waiting handled at API layer)
+- [x] Custom exceptions: `Connect4Error`, `InvalidMoveError`, `ColumnFullError`, `GameOverError`
+- [x] Models: `Player` (IntEnum), `GameStatus` (StrEnum)
+- [x] Tests for all core logic (`tests/core/`) — 31 tests
 
 ## Phase 3: Database & Storage
 
