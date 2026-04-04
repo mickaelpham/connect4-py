@@ -23,4 +23,4 @@ migrate:
 	uv run alembic upgrade head
 
 serve:
-	uv run uvicorn connect4.api.app:app --reload
+	uv run uvicorn connect4.api.app:app --reload --env-file .env
