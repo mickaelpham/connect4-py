@@ -64,6 +64,14 @@ async def test_register_password_too_short(app_client: httpx.AsyncClient):
     assert resp.status_code == 422
 
 
+async def test_login_password_too_long(app_client: httpx.AsyncClient):
+    resp = await app_client.post(
+        "/login",
+        json={"username": "anyuser", "password": "a" * 73},
+    )
+    assert resp.status_code == 422
+
+
 async def test_login_success(app_client: httpx.AsyncClient):
     await app_client.post(
         "/register",
