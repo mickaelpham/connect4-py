@@ -78,10 +78,13 @@
 
 ## Phase 7: Router & Layout Shell
 
+- [ ] Set up Vitest + @testing-library/svelte + jsdom (config, npm scripts, Makefile `fe-test` target)
+- [ ] Set up MSW (Mock Service Worker) for API mocking in tests
 - [ ] Hand-rolled history router (~30 lines): push/replace/listen on `popstate`
 - [ ] Route table: `/login`, `/register`, `/` (lobby), `/games/:id`
 - [ ] App layout shell: nav bar (logo, logged-in player name, logout button), `<main>` slot
 - [ ] Redirect unauthenticated users to `/login`
+- [ ] Tests: route matching, `navigate()`/`back()`, auth redirect logic
 
 ## Phase 8: Auth Pages & Token Management
 
@@ -90,6 +93,7 @@
 - [ ] Auth store (`$state`): holds access token in memory (never localStorage)
 - [ ] `apiFetch` wrapper — injects `Authorization` header, intercepts 401, calls `POST /refresh` transparently, retries original request
 - [ ] Logout: clears token state, redirects to `/login`
+- [ ] Tests: `apiFetch` 401 intercept + token refresh retry (MSW), auth store state transitions, login/register form submission + error display
 
 ## Phase 9: Game Lobby
 
@@ -98,6 +102,7 @@
   - [ ] "Open games" — `GET /games?status=waiting` (needs new backend filter), shows creator + join button
 - [ ] "New game" button — `POST /games`, navigates to `/games/:id`
 - [ ] Join game — `POST /games/:id/join`, navigates to `/games/:id`
+- [ ] Tests: game list rendering, pagination, create/join actions (MSW)
 
 ## Phase 10: Game Board & Play
 
@@ -109,6 +114,7 @@
 - [ ] Win highlight — highlight the four winning cells
 - [ ] Game status display: waiting for opponent, your turn, opponent's turn, you won, you lost, draw
 - [ ] Polling fallback (2s) if SSE connection drops, stops when game is over
+- [ ] Tests: board rendering from game state, click-to-play dispatches move, optimistic update + rollback on error, win cell highlighting, status display per game state
 
 ## Phase 11: SSE Real-Time Updates
 
@@ -119,6 +125,7 @@
 - [ ] Frontend: `EventSource` connection to `/games/:id/stream` when on game page
 - [ ] Frontend: auto-reconnect with full state refetch on reconnection
 - [ ] Frontend: close SSE connection when navigating away from game page
+- [ ] Frontend tests: SSE reconnect logic, state sync on reconnection, connection cleanup on navigate-away
 
 ## Phase 12: Error Handling & Polish
 
@@ -126,3 +133,12 @@
 - [ ] Loading states (skeleton/spinner) for async fetches
 - [ ] 404 page for unknown routes
 - [ ] Disable inputs while requests are in flight
+
+## Phase 13: E2E Tests
+
+- [ ] Set up Playwright (install, `playwright.config.ts`, npm scripts + Makefile targets)
+- [ ] Helper: start backend + frontend dev servers for test runs
+- [ ] E2E: register → login → create game flow
+- [ ] E2E: two-player game to completion (win + draw)
+- [ ] E2E: lobby list updates after game creation / join
+- [ ] E2E: error states (wrong turn, full column, game over)
