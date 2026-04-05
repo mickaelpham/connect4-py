@@ -54,7 +54,11 @@ async def register(
             status_code=status.HTTP_409_CONFLICT,
             detail="Username already taken",
         )
-    assert player is not None
+    if player is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create player",
+        )
     return await _issue_tokens(conn, player["id"], username)
 
 

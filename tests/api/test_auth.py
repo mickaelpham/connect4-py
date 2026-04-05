@@ -66,6 +66,22 @@ async def test_register_password_too_short(app_client: httpx.AsyncClient):
     assert resp.status_code == 422
 
 
+async def test_register_500_when_create_player_returns_none(
+    app_client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    async def _returning_none(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr("connect4.api.auth.create_player", _returning_none)
+    resp = await app_client.post(
+        "/register",
+        json={"username": "newuser", "password": "password123"},
+    )
+    assert resp.status_code == 500
+    assert resp.json()["detail"] == "Failed to create player"
+
+
 async def test_login_password_too_long(app_client: httpx.AsyncClient):
     resp = await app_client.post(
         "/login",
