@@ -6,7 +6,7 @@ pytestmark = pytest.mark.usefixtures("_clean_tables")
 
 async def _register(client: httpx.AsyncClient, username: str) -> dict:
     resp = await client.post(
-        "/register",
+        "/api/register",
         json={"username": username, "password": "password123"},
     )
     assert resp.status_code == 201
@@ -19,7 +19,7 @@ async def _auth_header(client: httpx.AsyncClient, username: str) -> dict[str, st
 
 
 async def _create_game(client: httpx.AsyncClient, headers: dict[str, str]) -> dict:
-    resp = await client.post("/games", headers=headers)
+    resp = await client.post("/api/games", headers=headers)
     assert resp.status_code == 201
     return resp.json()
 
@@ -29,7 +29,7 @@ async def _join_game(
     game_id: str,
     headers: dict[str, str],
 ) -> dict:
-    resp = await client.post(f"/games/{game_id}/join", headers=headers)
+    resp = await client.post(f"/api/games/{game_id}/join", headers=headers)
     assert resp.status_code == 200
     return resp.json()
 
@@ -47,7 +47,7 @@ async def test_create_game(app_client: httpx.AsyncClient):
 
 
 async def test_create_game_unauthenticated(app_client: httpx.AsyncClient):
-    resp = await app_client.post("/games")
+    resp = await app_client.post("/api/games")
     assert resp.status_code == 401
 
 
@@ -69,7 +69,7 @@ async def test_join_own_game(app_client: httpx.AsyncClient):
     h = await _auth_header(app_client, "selfjoin")
     game = await _create_game(app_client, h)
 
-    resp = await app_client.post(f"/games/{game['id']}/join", headers=h)
+    resp = await app_client.post(f"/api/games/{game['id']}/join", headers=h)
     assert resp.status_code == 409
     assert "own game" in resp.json()["detail"].lower()
 
@@ -81,13 +81,13 @@ async def test_join_already_started_game(app_client: httpx.AsyncClient):
     game = await _create_game(app_client, h1)
     await _join_game(app_client, game["id"], h2)
 
-    resp = await app_client.post(f"/games/{game['id']}/join", headers=h3)
+    resp = await app_client.post(f"/api/games/{game['id']}/join", headers=h3)
     assert resp.status_code == 409
 
 
 async def test_join_nonexistent_game(app_client: httpx.AsyncClient):
     h = await _auth_header(app_client, "joiner_noexist")
-    resp = await app_client.post("/games/00000000000000000000000000/join", headers=h)
+    resp = await app_client.post("/api/games/00000000000000000000000000/join", headers=h)
     assert resp.status_code == 404
 
 
@@ -101,7 +101,7 @@ async def test_play_move(app_client: httpx.AsyncClient):
     await _join_game(app_client, game["id"], h2)
 
     resp = await app_client.post(
-        f"/games/{game['id']}/moves",
+        f"/api/games/{game['id']}/moves",
         json={"column": 3},
         headers=h1,
     )
@@ -120,7 +120,7 @@ async def test_play_wrong_turn(app_client: httpx.AsyncClient):
 
     # Player 2 tries to go first
     resp = await app_client.post(
-        f"/games/{game['id']}/moves",
+        f"/api/games/{game['id']}/moves",
         json={"column": 0},
         headers=h2,
     )
@@ -138,7 +138,7 @@ async def test_play_column_full(app_client: httpx.AsyncClient):
     headers = [h1, h2]
     for i in range(6):
         resp = await app_client.post(
-            f"/games/{game['id']}/moves",
+            f"/api/games/{game['id']}/moves",
             json={"column": 0},
             headers=headers[i % 2],
         )
@@ -146,7 +146,7 @@ async def test_play_column_full(app_client: httpx.AsyncClient):
 
     # 7th move in column 0 should fail
     resp = await app_client.post(
-        f"/games/{game['id']}/moves",
+        f"/api/games/{game['id']}/moves",
         json={"column": 0},
         headers=h1,
     )
@@ -160,7 +160,7 @@ async def test_play_invalid_column(app_client: httpx.AsyncClient):
     await _join_game(app_client, game["id"], h2)
 
     resp = await app_client.post(
-        f"/games/{game['id']}/moves",
+        f"/api/games/{game['id']}/moves",
         json={"column": 7},
         headers=h1,
     )
@@ -172,7 +172,7 @@ async def test_play_on_waiting_game(app_client: httpx.AsyncClient):
     game = await _create_game(app_client, h1)
 
     resp = await app_client.post(
-        f"/games/{game['id']}/moves",
+        f"/api/games/{game['id']}/moves",
         json={"column": 0},
         headers=h1,
     )
@@ -190,21 +190,21 @@ async def test_play_winning_move(app_client: httpx.AsyncClient):
     moves = [0, 1, 0, 1, 0, 1]
     for i, col in enumerate(moves):
         await app_client.post(
-            f"/games/{game['id']}/moves",
+            f"/api/games/{game['id']}/moves",
             json={"column": col},
             headers=headers[i % 2],
         )
 
     # P1 plays col 0 for the win (4th in column 0)
     resp = await app_client.post(
-        f"/games/{game['id']}/moves",
+        f"/api/games/{game['id']}/moves",
         json={"column": 0},
         headers=h1,
     )
     assert resp.status_code == 201
 
     # Verify game is won
-    detail = await app_client.get(f"/games/{game['id']}", headers=h1)
+    detail = await app_client.get(f"/api/games/{game['id']}", headers=h1)
     data = detail.json()
     assert data["status"] == "won"
     assert data["winner"]["username"] == "win_p1"
@@ -222,14 +222,14 @@ async def test_play_after_game_over(app_client: httpx.AsyncClient):
     headers = [h1, h2]
     for i, col in enumerate(moves):
         await app_client.post(
-            f"/games/{game['id']}/moves",
+            f"/api/games/{game['id']}/moves",
             json={"column": col},
             headers=headers[i % 2],
         )
 
     # Try another move after game over
     resp = await app_client.post(
-        f"/games/{game['id']}/moves",
+        f"/api/games/{game['id']}/moves",
         json={"column": 2},
         headers=h2,
     )
@@ -247,12 +247,12 @@ async def test_get_game_detail(app_client: httpx.AsyncClient):
 
     # Play a move
     await app_client.post(
-        f"/games/{game['id']}/moves",
+        f"/api/games/{game['id']}/moves",
         json={"column": 3},
         headers=h1,
     )
 
-    resp = await app_client.get(f"/games/{game['id']}", headers=h1)
+    resp = await app_client.get(f"/api/games/{game['id']}", headers=h1)
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "in_progress"
@@ -266,12 +266,12 @@ async def test_get_game_detail(app_client: httpx.AsyncClient):
 
 async def test_get_game_not_found(app_client: httpx.AsyncClient):
     h = await _auth_header(app_client, "notfound_user")
-    resp = await app_client.get("/games/00000000000000000000000000", headers=h)
+    resp = await app_client.get("/api/games/00000000000000000000000000", headers=h)
     assert resp.status_code == 404
 
 
 async def test_get_game_unauthenticated(app_client: httpx.AsyncClient):
-    resp = await app_client.get("/games/someid")
+    resp = await app_client.get("/api/games/someid")
     assert resp.status_code == 401
 
 
@@ -284,10 +284,10 @@ async def test_get_moves(app_client: httpx.AsyncClient):
     game = await _create_game(app_client, h1)
     await _join_game(app_client, game["id"], h2)
 
-    await app_client.post(f"/games/{game['id']}/moves", json={"column": 0}, headers=h1)
-    await app_client.post(f"/games/{game['id']}/moves", json={"column": 1}, headers=h2)
+    await app_client.post(f"/api/games/{game['id']}/moves", json={"column": 0}, headers=h1)
+    await app_client.post(f"/api/games/{game['id']}/moves", json={"column": 1}, headers=h2)
 
-    resp = await app_client.get(f"/games/{game['id']}/moves", headers=h1)
+    resp = await app_client.get(f"/api/games/{game['id']}/moves", headers=h1)
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) == 2
@@ -301,7 +301,7 @@ async def test_get_moves_empty(app_client: httpx.AsyncClient):
     h1 = await _auth_header(app_client, "emptymoves_p1")
     game = await _create_game(app_client, h1)
 
-    resp = await app_client.get(f"/games/{game['id']}/moves", headers=h1)
+    resp = await app_client.get(f"/api/games/{game['id']}/moves", headers=h1)
     assert resp.status_code == 200
     assert resp.json() == []
 
@@ -314,7 +314,7 @@ async def test_list_games(app_client: httpx.AsyncClient):
     await _create_game(app_client, h)
     await _create_game(app_client, h)
 
-    resp = await app_client.get("/games", headers=h)
+    resp = await app_client.get("/api/games", headers=h)
     assert resp.status_code == 200
     data = resp.json()
     assert len(data["games"]) == 2
@@ -327,14 +327,14 @@ async def test_list_games_pagination(app_client: httpx.AsyncClient):
         await _create_game(app_client, h)
 
     # Request with limit=2
-    resp = await app_client.get("/games?limit=2", headers=h)
+    resp = await app_client.get("/api/games?limit=2", headers=h)
     data = resp.json()
     assert len(data["games"]) == 2
     assert data["next_cursor"] is not None
 
     # Next page
     resp2 = await app_client.get(
-        f"/games?limit=2&cursor={data['next_cursor']}", headers=h
+        f"/api/games?limit=2&cursor={data['next_cursor']}", headers=h
     )
     data2 = resp2.json()
     assert len(data2["games"]) == 1
@@ -348,7 +348,7 @@ async def test_list_games_pagination(app_client: httpx.AsyncClient):
 
 async def test_list_games_empty(app_client: httpx.AsyncClient):
     h = await _auth_header(app_client, "emptygames_user")
-    resp = await app_client.get("/games", headers=h)
+    resp = await app_client.get("/api/games", headers=h)
     assert resp.status_code == 200
     data = resp.json()
     assert data["games"] == []
@@ -356,5 +356,5 @@ async def test_list_games_empty(app_client: httpx.AsyncClient):
 
 
 async def test_list_games_unauthenticated(app_client: httpx.AsyncClient):
-    resp = await app_client.get("/games")
+    resp = await app_client.get("/api/games")
     assert resp.status_code == 401

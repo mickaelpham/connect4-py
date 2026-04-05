@@ -31,7 +31,7 @@ async def cors_client(
 
 async def test_cors_allowed_origin(cors_client: httpx.AsyncClient):
     resp = await cors_client.options(
-        "/login",
+        "/api/login",
         headers={
             "Origin": "http://localhost:5173",
             "Access-Control-Request-Method": "POST",
@@ -46,7 +46,7 @@ async def test_cors_allowed_origin(cors_client: httpx.AsyncClient):
 
 async def test_cors_disallowed_origin(cors_client: httpx.AsyncClient):
     resp = await cors_client.options(
-        "/login",
+        "/api/login",
         headers={
             "Origin": "http://evil.com",
             "Access-Control-Request-Method": "POST",
@@ -57,7 +57,7 @@ async def test_cors_disallowed_origin(cors_client: httpx.AsyncClient):
 
 async def test_cors_disallowed_method(cors_client: httpx.AsyncClient):
     resp = await cors_client.options(
-        "/login",
+        "/api/login",
         headers={
             "Origin": "http://localhost:5173",
             "Access-Control-Request-Method": "DELETE",

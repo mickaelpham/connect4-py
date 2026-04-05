@@ -65,8 +65,8 @@ async def app_client(
     limiter.enabled = False
     test_app = FastAPI()
     test_app.state.db_pool = db_pool
-    test_app.include_router(auth_router)
-    test_app.include_router(games_router)
+    test_app.include_router(auth_router, prefix="/api")
+    test_app.include_router(games_router, prefix="/api")
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=test_app),

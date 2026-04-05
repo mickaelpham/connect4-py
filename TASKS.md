@@ -66,11 +66,15 @@
 
 ## Phase 6: Frontend Scaffolding
 
-- [ ] Scaffold Svelte 5 app with Vite in `frontend/` (`npm create vite@latest frontend -- --template svelte`)
-- [ ] Clean up boilerplate (remove default assets, counter component, etc.)
-- [ ] Configure Vite dev server proxy (`/api` → `http://localhost:8000`) to avoid CORS in dev
-- [ ] Add npm scripts: `dev`, `build`, `preview`
-- [ ] Add Makefile targets: `fe-dev`, `fe-build`
+- [x] Scaffold Svelte 5 app with Vite in `frontend/` (svelte-ts template)
+- [x] Clean up boilerplate (remove default assets, counter component, etc.)
+- [x] Configure Vite dev server proxy (`/api` → `http://localhost:8000`) to avoid CORS in dev
+- [x] Add npm scripts: `dev`, `build`, `preview`, `lint`, `lint:fix`
+- [x] Add Makefile targets: `fe-dev`, `fe-build`, `fe-lint`, `fe-lint-fix`
+- [x] Set up fnm + Node 22 LTS (`.node-version` file)
+- [x] Set up @antfu/eslint-config with Svelte + type-checked TS
+- [x] Create feature directory structure (`auth/`, `lobby/`, `game/`, `shared/`)
+- [x] Add `/api` prefix to FastAPI routers + update backend tests
 
 ## Phase 7: Router & Layout Shell
 

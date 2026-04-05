@@ -1,4 +1,4 @@
-.PHONY: test lint format check db-up db-down migrate serve
+.PHONY: test lint format check db-up db-down migrate serve fe-dev fe-build fe-lint fe-lint-fix
 
 test:
 	uv run pytest
@@ -24,3 +24,15 @@ migrate:
 
 serve:
 	uv run uvicorn connect4.api.app:app --reload --env-file .env
+
+fe-dev:
+	cd frontend && npm run dev
+
+fe-build:
+	cd frontend && npm run build
+
+fe-lint:
+	cd frontend && npm run lint
+
+fe-lint-fix:
+	cd frontend && npm run lint:fix
