@@ -83,17 +83,18 @@ async def refresh(
     conn: _asyncpg.Connection = Depends(get_db_conn),
 ) -> TokenResponse:
     token_hash = hash_refresh_token(body.refresh_token)
-    stored = await get_refresh_token_by_hash(conn, token_hash)
-    if stored is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token",
-        )
-    await revoke_refresh_token(conn, stored["id"])
-    player = await get_player_by_id(conn, stored["player_id"])
-    if player is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Player not found",
-        )
-    return await _issue_tokens(conn, stored["player_id"], player["username"])
+    async with conn.transaction():
+        stored = await get_refresh_token_by_hash(conn, token_hash)
+        if stored is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired refresh token",
+            )
+        await revoke_refresh_token(conn, stored["id"])
+        player = await get_player_by_id(conn, stored["player_id"])
+        if player is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Player not found",
+            )
+        return await _issue_tokens(conn, stored["player_id"], player["username"])

@@ -1,3 +1,5 @@
+import asyncio
+
 import httpx
 import pytest
 
@@ -146,6 +148,22 @@ async def test_refresh_reuse_revoked_token(app_client: httpx.AsyncClient):
         json={"refresh_token": refresh_token},
     )
     assert resp2.status_code == 401
+
+
+async def test_refresh_concurrent_reuse(app_client: httpx.AsyncClient):
+    """Two concurrent refreshes with the same token: only one should succeed."""
+    reg = await app_client.post(
+        "/register",
+        json={"username": "raceuser", "password": "password123"},
+    )
+    refresh_token = reg.json()["refresh_token"]
+
+    results = await asyncio.gather(
+        app_client.post("/refresh", json={"refresh_token": refresh_token}),
+        app_client.post("/refresh", json={"refresh_token": refresh_token}),
+    )
+    status_codes = sorted(r.status_code for r in results)
+    assert status_codes == [200, 401]
 
 
 async def test_refresh_invalid_token(app_client: httpx.AsyncClient):

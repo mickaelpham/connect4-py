@@ -36,6 +36,7 @@ async def get_refresh_token_by_hash(
         WHERE token_hash = $1
           AND revoked_at IS NULL
           AND expires_at > now()
+        FOR UPDATE
         """,
         token_hash,
     )
