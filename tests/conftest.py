@@ -59,7 +59,9 @@ async def app_client(
     from fastapi import FastAPI
 
     from connect4.api.auth import router as auth_router
+    from connect4.api.rate_limit import limiter
 
+    limiter.enabled = False
     test_app = FastAPI()
     test_app.state.db_pool = db_pool
     test_app.include_router(auth_router)
@@ -69,5 +71,7 @@ async def app_client(
         base_url="http://test",
     ) as client:
         yield client
+
+    limiter.enabled = True
 
 

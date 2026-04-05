@@ -1,8 +1,9 @@
 import asyncpg as _asyncpg
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from connect4.api.dependencies import get_db_conn
 from connect4.api.passwords import hash_password, verify_password
+from connect4.api.rate_limit import limiter
 from connect4.api.schemas import (
     LoginRequest,
     RefreshRequest,
@@ -38,7 +39,9 @@ async def _issue_tokens(
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
+@limiter.limit("3/minute")
 async def register(
+    request: Request,
     body: RegisterRequest,
     conn: _asyncpg.Connection = Depends(get_db_conn),
 ) -> TokenResponse:
@@ -56,7 +59,9 @@ async def register(
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("5/minute")
 async def login(
+    request: Request,
     body: LoginRequest,
     conn: _asyncpg.Connection = Depends(get_db_conn),
 ) -> TokenResponse:
@@ -71,7 +76,9 @@ async def login(
 
 
 @router.post("/refresh", response_model=TokenResponse)
+@limiter.limit("10/minute")
 async def refresh(
+    request: Request,
     body: RefreshRequest,
     conn: _asyncpg.Connection = Depends(get_db_conn),
 ) -> TokenResponse:
