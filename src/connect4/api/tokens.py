@@ -22,6 +22,8 @@ def create_access_token(player_id: str, username: str) -> str:
         "sub": player_id,
         "username": username,
         "type": "access",
+        "iss": "connect4",
+        "aud": "connect4",
         "iat": now,
         "exp": now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     }
@@ -29,7 +31,9 @@ def create_access_token(player_id: str, username: str) -> str:
 
 
 def decode_access_token(token: str) -> dict:
-    payload = jwt.decode(token, _get_secret(), algorithms=["HS256"])
+    payload = jwt.decode(
+        token, _get_secret(), algorithms=["HS256"], issuer="connect4", audience="connect4"
+    )
     if payload.get("type") != "access":
         raise jwt.InvalidTokenError("Not an access token")
     return payload

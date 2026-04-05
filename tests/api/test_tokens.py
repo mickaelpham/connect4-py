@@ -32,6 +32,8 @@ def test_access_token_expired():
         "sub": "player123",
         "username": "alice",
         "type": "access",
+        "iss": "connect4",
+        "aud": "connect4",
         "iat": now - timedelta(hours=1),
         "exp": now - timedelta(minutes=1),
     }
@@ -49,6 +51,8 @@ def test_decode_rejects_non_access_token():
     payload = {
         "sub": "player123",
         "type": "refresh",
+        "iss": "connect4",
+        "aud": "connect4",
         "exp": datetime.now(UTC) + timedelta(hours=1),
     }
     token = jwt.encode(payload, SECRET, algorithm="HS256")

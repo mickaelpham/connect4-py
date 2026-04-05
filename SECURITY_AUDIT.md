@@ -151,6 +151,8 @@ HS256 (symmetric) is fine for a single-service app where the same service issues
 
 No action needed now.
 
+**Status:** Acknowledged. HS256 is appropriate for the current single-service architecture.
+
 ---
 
 ### INFO-2: No iss/aud claims in JWT
@@ -161,6 +163,8 @@ No action needed now.
 The JWT payload lacks `iss` (issuer) and `aud` (audience) claims. In a single-service setup this is fine. If other services are added, tokens could be accepted across services unintentionally.
 
 **Recommendation for future:** Add `"iss": "connect4"` and `"aud": "connect4"` to the payload, and validate them in `decode_access_token`.
+
+**Status:** Fixed. Added `iss` and `aud` claims to token creation and validation.
 
 ---
 
@@ -173,6 +177,8 @@ The argon2-cffi defaults are: `time_cost=3`, `memory_cost=65536` (64 MiB), `para
 
 No action needed.
 
+**Status:** Acknowledged. Argon2id defaults meet OWASP recommendations.
+
 ---
 
 ### INFO-4: No security headers or HTTPS enforcement
@@ -183,6 +189,8 @@ No action needed.
 The app does not set security headers (`Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`) or enforce HTTPS. For local development this is expected. In production, these should be set — typically at the reverse proxy (nginx/Caddy) rather than in the app.
 
 **Recommendation:** When deploying, ensure the reverse proxy adds these headers. If serving directly, consider adding `starlette-security-headers` or equivalent middleware.
+
+**Status:** Acknowledged. Security headers will be handled at the reverse proxy layer when deploying.
 
 ---
 
