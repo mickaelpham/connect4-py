@@ -59,6 +59,11 @@
 - [ ] Error handling (invalid moves, wrong turn, game over)
 - [ ] Tests for API endpoints (`tests/api/`)
 
+## Pre-deployment
+
+- [ ] Make CORS `allow_origins` configurable via environment variable (currently hardcoded to `http://localhost:5173` in `src/connect4/api/app.py:23`)
+- [ ] If switching to multi-worker deployment, replace slowapi in-memory storage with Redis-backed storage (`src/connect4/api/rate_limit.py`)
+
 ## Phase 6 (later): Frontend
 
 - [ ] TBD — to be planned separately
