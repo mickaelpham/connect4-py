@@ -127,6 +127,8 @@ Revoked and expired refresh tokens are never deleted — only soft-revoked via `
 
 **Recommendation:** Add a periodic cleanup job or a migration to add a cron-triggered `DELETE FROM refresh_tokens WHERE revoked_at IS NOT NULL OR expires_at < now()`. For a side project, a manual `make db-cleanup` target is sufficient.
 
+**Status:** Accepted. Token table growth is negligible for a side project with low traffic. A cleanup job can be added later if the table becomes large.
+
 ---
 
 ### LOW-3: Inconsistent ON DELETE policy across foreign keys
