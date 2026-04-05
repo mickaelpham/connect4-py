@@ -67,12 +67,30 @@ async def update_game_status(
 async def list_player_games(
     conn: asyncpg.Connection,
     player_id: str,
+    *,
+    cursor: str | None = None,
+    limit: int = 20,
 ) -> list[asyncpg.Record]:
+    if cursor is not None:
+        return await conn.fetch(
+            """
+            SELECT * FROM games
+            WHERE (player1_id = $1 OR player2_id = $1)
+              AND id < $2
+            ORDER BY id DESC
+            LIMIT $3
+            """,
+            player_id,
+            cursor,
+            limit,
+        )
     return await conn.fetch(
         """
         SELECT * FROM games
         WHERE player1_id = $1 OR player2_id = $1
-        ORDER BY created_at DESC
+        ORDER BY id DESC
+        LIMIT $2
         """,
         player_id,
+        limit,
     )

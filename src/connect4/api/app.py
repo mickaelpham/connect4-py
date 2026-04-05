@@ -28,5 +28,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 from connect4.api.auth import router as auth_router  # noqa: E402
+from connect4.api.games import router as games_router  # noqa: E402
 
 app.include_router(auth_router)
+app.include_router(games_router)

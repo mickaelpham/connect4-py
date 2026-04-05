@@ -50,14 +50,14 @@
 ## Phase 5: API
 
 - [x] FastAPI app setup (done in Phase 4)
-- [ ] `POST /games` — create a new game
-- [ ] `POST /games/{id}/join` — second player joins
-- [ ] `POST /games/{id}/moves` — play a move
-- [ ] `GET /games/{id}` — get game state (board derived from moves)
-- [ ] `GET /games/{id}/moves` — get move history
-- [ ] `GET /games` — list player's games
-- [ ] Error handling (invalid moves, wrong turn, game over)
-- [ ] Tests for API endpoints (`tests/api/`)
+- [x] `POST /games` — create a new game
+- [x] `POST /games/{id}/join` — second player joins
+- [x] `POST /games/{id}/moves` — play a move (SELECT FOR UPDATE + unique constraint on move_number)
+- [x] `GET /games/{id}` — get game state (row-major 6×7 board derived from moves)
+- [x] `GET /games/{id}/moves` — get move history
+- [x] `GET /games` — list player's games (cursor pagination, ULID-based)
+- [x] Error handling (invalid moves, wrong turn, game over, self-join, not found)
+- [x] Tests for API endpoints (`tests/api/`) — 22 tests
 
 ## Pre-deployment
 
