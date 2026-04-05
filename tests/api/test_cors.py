@@ -3,7 +3,6 @@ from collections.abc import AsyncGenerator
 
 import asyncpg
 import httpx
-import pytest
 import pytest_asyncio
 
 from connect4.api.app import app

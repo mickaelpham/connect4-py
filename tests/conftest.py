@@ -75,5 +75,3 @@ async def app_client(
         yield client
 
     limiter.enabled = True
-
-

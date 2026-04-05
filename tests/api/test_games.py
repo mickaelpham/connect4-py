@@ -87,7 +87,8 @@ async def test_join_already_started_game(app_client: httpx.AsyncClient):
 
 async def test_join_nonexistent_game(app_client: httpx.AsyncClient):
     h = await _auth_header(app_client, "joiner_noexist")
-    resp = await app_client.post("/api/games/00000000000000000000000000/join", headers=h)
+    url = "/api/games/00000000000000000000000000/join"
+    resp = await app_client.post(url, headers=h)
     assert resp.status_code == 404
 
 
@@ -284,8 +285,9 @@ async def test_get_moves(app_client: httpx.AsyncClient):
     game = await _create_game(app_client, h1)
     await _join_game(app_client, game["id"], h2)
 
-    await app_client.post(f"/api/games/{game['id']}/moves", json={"column": 0}, headers=h1)
-    await app_client.post(f"/api/games/{game['id']}/moves", json={"column": 1}, headers=h2)
+    moves_url = f"/api/games/{game['id']}/moves"
+    await app_client.post(moves_url, json={"column": 0}, headers=h1)
+    await app_client.post(moves_url, json={"column": 1}, headers=h2)
 
     resp = await app_client.get(f"/api/games/{game['id']}/moves", headers=h1)
     assert resp.status_code == 200
