@@ -64,6 +64,8 @@ The `/register` endpoint returns HTTP 409 with `"Username already taken"` when a
 
 **Recommendation:** Return a generic error (e.g., `"Registration failed"`) or a 200 with a message like `"If this username is available, check your email"` (if email verification is added later). For a side project, this is an acceptable tradeoff if acknowledged — but flag it before adding any sensitive features.
 
+**Status:** Accepted. Usernames are not sensitive (public in game context), and there is no email-based account recovery. Risk is acceptable for this project's threat model.
+
 ---
 
 ### MED-3: No CORS middleware configured
