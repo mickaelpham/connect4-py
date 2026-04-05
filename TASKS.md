@@ -64,6 +64,61 @@
 - [ ] Make CORS `allow_origins` configurable via environment variable (currently hardcoded to `http://localhost:5173` in `src/connect4/api/app.py:23`)
 - [ ] If switching to multi-worker deployment, replace slowapi in-memory storage with Redis-backed storage (`src/connect4/api/rate_limit.py`)
 
-## Phase 6 (later): Frontend
+## Phase 6: Frontend Scaffolding
 
-- [ ] TBD — to be planned separately
+- [ ] Scaffold Svelte 5 app with Vite in `frontend/` (`npm create vite@latest frontend -- --template svelte`)
+- [ ] Clean up boilerplate (remove default assets, counter component, etc.)
+- [ ] Configure Vite dev server proxy (`/api` → `http://localhost:8000`) to avoid CORS in dev
+- [ ] Add npm scripts: `dev`, `build`, `preview`
+- [ ] Add Makefile targets: `fe-dev`, `fe-build`
+
+## Phase 7: Router & Layout Shell
+
+- [ ] Hand-rolled history router (~30 lines): push/replace/listen on `popstate`
+- [ ] Route table: `/login`, `/register`, `/` (lobby), `/games/:id`
+- [ ] App layout shell: nav bar (logo, logged-in player name, logout button), `<main>` slot
+- [ ] Redirect unauthenticated users to `/login`
+
+## Phase 8: Auth Pages & Token Management
+
+- [ ] `LoginPage` component — username + password form, calls `POST /login`
+- [ ] `RegisterPage` component — username + password form, calls `POST /register`, auto-login on success
+- [ ] Auth store (`$state`): holds access token in memory (never localStorage)
+- [ ] `apiFetch` wrapper — injects `Authorization` header, intercepts 401, calls `POST /refresh` transparently, retries original request
+- [ ] Logout: clears token state, redirects to `/login`
+
+## Phase 9: Game Lobby
+
+- [ ] `LobbyPage` component with two sections:
+  - [ ] "Your games" — `GET /games` with cursor pagination, shows status/opponent/last move
+  - [ ] "Open games" — `GET /games?status=waiting` (needs new backend filter), shows creator + join button
+- [ ] "New game" button — `POST /games`, navigates to `/games/:id`
+- [ ] Join game — `POST /games/:id/join`, navigates to `/games/:id`
+
+## Phase 10: Game Board & Play
+
+- [ ] `GamePage` component — fetches `GET /games/:id` and `GET /games/:id/moves`
+- [ ] `Board` component — 7×6 HTML/CSS grid, renders pieces as colored circles
+- [ ] Column hover indicator (highlights column on mouseover when it's your turn)
+- [ ] Click to play — `POST /games/:id/moves`, optimistic update
+- [ ] CSS transition for piece drop animation
+- [ ] Win highlight — highlight the four winning cells
+- [ ] Game status display: waiting for opponent, your turn, opponent's turn, you won, you lost, draw
+- [ ] Polling fallback (2s) if SSE connection drops, stops when game is over
+
+## Phase 11: SSE Real-Time Updates
+
+- [ ] Backend: add `pg_notify()` calls in `create_move()`, `join_game()`, and game-over logic
+- [ ] Backend: SSE endpoint `GET /games/:id/stream` — listens on `game_{id}` channel via asyncpg, yields events (`player_joined`, `move`, `game_over`)
+- [ ] Backend: full state fetch on SSE connect (so client never misses prior events)
+- [ ] Backend: tests for SSE endpoint
+- [ ] Frontend: `EventSource` connection to `/games/:id/stream` when on game page
+- [ ] Frontend: auto-reconnect with full state refetch on reconnection
+- [ ] Frontend: close SSE connection when navigating away from game page
+
+## Phase 12: Error Handling & Polish
+
+- [ ] Toast/notification system for API errors (invalid move, game full, etc.)
+- [ ] Loading states (skeleton/spinner) for async fetches
+- [ ] 404 page for unknown routes
+- [ ] Disable inputs while requests are in flight
