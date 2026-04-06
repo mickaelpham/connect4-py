@@ -32,7 +32,8 @@ function applyAuthGuard(route: Route): Route {
   return route
 }
 
-let currentRoute: Route = $state(applyAuthGuard(parseRoute(window.location.pathname)))
+// No auth guard on initial load — App.svelte calls refreshRoute() after tryRefresh()
+let currentRoute: Route = $state(parseRoute(window.location.pathname))
 
 export function navigate(path: string) {
   window.history.pushState(null, '', path)
@@ -42,6 +43,10 @@ export function navigate(path: string) {
 window.addEventListener('popstate', () => {
   currentRoute = applyAuthGuard(parseRoute(window.location.pathname))
 })
+
+export function refreshRoute() {
+  currentRoute = applyAuthGuard(parseRoute(window.location.pathname))
+}
 
 export function getRoute() {
   return {

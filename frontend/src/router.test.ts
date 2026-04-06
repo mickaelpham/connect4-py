@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { clearAuth, setAuth } from './auth/auth.svelte'
-import { getRoute, navigate, parseRoute } from './router.svelte'
+import { getRoute, navigate, parseRoute, refreshRoute } from './router.svelte'
 
 function setPath(path: string) {
   window.history.replaceState(null, '', path)
@@ -91,6 +91,25 @@ describe('auth redirect', () => {
     clearAuth()
     setPath('/games/abc')
     window.dispatchEvent(new PopStateEvent('popstate'))
+    expect(getRoute().current).toEqual({ page: 'login', params: {} })
+  })
+})
+
+describe('refreshRoute', () => {
+  it('re-evaluates current URL with auth guard after login', () => {
+    clearAuth()
+    setPath('/')
+    // Simulate: user lands on /, not yet authenticated
+    // After tryRefresh succeeds, auth is set and refreshRoute is called
+    setAuth('tok', 'alice')
+    refreshRoute()
+    expect(getRoute().current).toEqual({ page: 'lobby', params: {} })
+  })
+
+  it('redirects to /login if still unauthenticated after refresh attempt', () => {
+    clearAuth()
+    setPath('/')
+    refreshRoute()
     expect(getRoute().current).toEqual({ page: 'login', params: {} })
   })
 })

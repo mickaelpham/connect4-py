@@ -5,7 +5,7 @@
   import RegisterPage from './auth/RegisterPage.svelte'
   import GamePage from './game/GamePage.svelte'
   import LobbyPage from './lobby/LobbyPage.svelte'
-  import { getRoute, navigate } from './router.svelte'
+  import { getRoute, navigate, refreshRoute } from './router.svelte'
   import { logout, tryRefresh } from './shared/api'
 
   const route = getRoute()
@@ -14,6 +14,7 @@
   onMount(async () => {
     await tryRefresh()
     markInitialized()
+    refreshRoute()
   })
 
   function handleLogout() {
