@@ -15,6 +15,10 @@ def _get_refresh_cookie(resp: httpx.Response) -> str | None:
     return None
 
 
+def _cookie_header(value: str) -> dict[str, str]:
+    return {"Cookie": f"{REFRESH_COOKIE}={value}"}
+
+
 async def test_register_success(app_client: httpx.AsyncClient):
     resp = await app_client.post(
         "/api/register",
@@ -148,7 +152,7 @@ async def test_refresh_success(app_client: httpx.AsyncClient):
 
     resp = await app_client.post(
         "/api/refresh",
-        cookies={REFRESH_COOKIE: refresh_cookie},
+        headers=_cookie_header(refresh_cookie),
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -170,14 +174,14 @@ async def test_refresh_reuse_revoked_token(app_client: httpx.AsyncClient):
     # First use succeeds
     resp1 = await app_client.post(
         "/api/refresh",
-        cookies={REFRESH_COOKIE: refresh_cookie},
+        headers=_cookie_header(refresh_cookie),
     )
     assert resp1.status_code == 200
 
     # Second use of same token fails
     resp2 = await app_client.post(
         "/api/refresh",
-        cookies={REFRESH_COOKIE: refresh_cookie},
+        headers=_cookie_header(refresh_cookie),
     )
     assert resp2.status_code == 401
 
@@ -192,10 +196,10 @@ async def test_refresh_concurrent_reuse(app_client: httpx.AsyncClient):
 
     results = await asyncio.gather(
         app_client.post(
-            "/api/refresh", cookies={REFRESH_COOKIE: refresh_cookie}
+            "/api/refresh", headers=_cookie_header(refresh_cookie)
         ),
         app_client.post(
-            "/api/refresh", cookies={REFRESH_COOKIE: refresh_cookie}
+            "/api/refresh", headers=_cookie_header(refresh_cookie)
         ),
     )
     status_codes = sorted(r.status_code for r in results)
@@ -205,7 +209,7 @@ async def test_refresh_concurrent_reuse(app_client: httpx.AsyncClient):
 async def test_refresh_invalid_token(app_client: httpx.AsyncClient):
     resp = await app_client.post(
         "/api/refresh",
-        cookies={REFRESH_COOKIE: "completely-invalid-token"},
+        headers=_cookie_header("completely-invalid-token"),
     )
     assert resp.status_code == 401
 
@@ -225,14 +229,14 @@ async def test_logout_clears_cookie(app_client: httpx.AsyncClient):
 
     resp = await app_client.post(
         "/api/logout",
-        cookies={REFRESH_COOKIE: refresh_cookie},
+        headers=_cookie_header(refresh_cookie),
     )
     assert resp.status_code == 204
 
     # Refresh token should be revoked after logout
     resp2 = await app_client.post(
         "/api/refresh",
-        cookies={REFRESH_COOKIE: refresh_cookie},
+        headers=_cookie_header(refresh_cookie),
     )
     assert resp2.status_code == 401
 

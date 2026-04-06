@@ -94,12 +94,12 @@ async def test_refresh_rate_limit(rate_limited_client: httpx.AsyncClient):
     for i in range(10):
         resp = await rate_limited_client.post(
             "/refresh",
-            cookies={"refresh_token": cookies[i]},
+            headers={"Cookie": f"refresh_token={cookies[i]}"},
         )
         assert resp.status_code == 200, f"Request {i + 1} should succeed"
 
     resp = await rate_limited_client.post(
         "/refresh",
-        cookies={"refresh_token": cookies[10]},
+        headers={"Cookie": f"refresh_token={cookies[10]}"},
     )
     assert resp.status_code == 429
