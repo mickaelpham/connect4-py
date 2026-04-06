@@ -1,17 +1,23 @@
 <script lang='ts'>
-  import { clearAuth, getAuth, isAuthenticated } from './auth/auth.svelte'
+  import { onMount } from 'svelte'
+  import { getAuth, isAuthenticated, markInitialized } from './auth/auth.svelte'
   import LoginPage from './auth/LoginPage.svelte'
   import RegisterPage from './auth/RegisterPage.svelte'
   import GamePage from './game/GamePage.svelte'
   import LobbyPage from './lobby/LobbyPage.svelte'
   import { getRoute, navigate } from './router.svelte'
+  import { logout, tryRefresh } from './shared/api'
 
   const route = getRoute()
   const auth = getAuth()
 
+  onMount(async () => {
+    await tryRefresh()
+    markInitialized()
+  })
+
   function handleLogout() {
-    clearAuth()
-    navigate('/login')
+    logout()
   }
 
   function handleLogoClick(e: MouseEvent) {
@@ -34,7 +40,9 @@
 </nav>
 
 <main>
-  {#if route.current.page === 'login'}
+  {#if !auth.initialized}
+    <p>Loading...</p>
+  {:else if route.current.page === 'login'}
     <LoginPage />
   {:else if route.current.page === 'register'}
     <RegisterPage />

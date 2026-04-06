@@ -5,6 +5,15 @@ import pytest
 
 pytestmark = pytest.mark.usefixtures("_clean_tables")
 
+REFRESH_COOKIE = "refresh_token"
+
+
+def _get_refresh_cookie(resp: httpx.Response) -> str | None:
+    for name, value in resp.cookies.items():
+        if name == REFRESH_COOKIE:
+            return value
+    return None
+
 
 async def test_register_success(app_client: httpx.AsyncClient):
     resp = await app_client.post(
@@ -14,8 +23,10 @@ async def test_register_success(app_client: httpx.AsyncClient):
     assert resp.status_code == 201
     data = resp.json()
     assert "access_token" in data
-    assert "refresh_token" in data
     assert data["token_type"] == "bearer"
+    assert data["username"] == "alice"
+    assert "refresh_token" not in data
+    assert _get_refresh_cookie(resp) is not None
 
 
 async def test_register_duplicate_username(app_client: httpx.AsyncClient):
@@ -102,7 +113,9 @@ async def test_login_success(app_client: httpx.AsyncClient):
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data
-    assert "refresh_token" in data
+    assert data["username"] == "loginuser"
+    assert "refresh_token" not in data
+    assert _get_refresh_cookie(resp) is not None
 
 
 async def test_login_wrong_password(app_client: httpx.AsyncClient):
@@ -130,18 +143,21 @@ async def test_refresh_success(app_client: httpx.AsyncClient):
         "/api/register",
         json={"username": "refreshuser", "password": "password123"},
     )
-    refresh_token = reg.json()["refresh_token"]
+    refresh_cookie = _get_refresh_cookie(reg)
+    assert refresh_cookie is not None
 
     resp = await app_client.post(
         "/api/refresh",
-        json={"refresh_token": refresh_token},
+        cookies={REFRESH_COOKIE: refresh_cookie},
     )
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data
-    assert "refresh_token" in data
-    # New refresh token should differ from old one
-    assert data["refresh_token"] != refresh_token
+    assert data["username"] == "refreshuser"
+    # New refresh cookie should differ from old one
+    new_cookie = _get_refresh_cookie(resp)
+    assert new_cookie is not None
+    assert new_cookie != refresh_cookie
 
 
 async def test_refresh_reuse_revoked_token(app_client: httpx.AsyncClient):
@@ -149,19 +165,19 @@ async def test_refresh_reuse_revoked_token(app_client: httpx.AsyncClient):
         "/api/register",
         json={"username": "reuseuser", "password": "password123"},
     )
-    refresh_token = reg.json()["refresh_token"]
+    refresh_cookie = _get_refresh_cookie(reg)
 
     # First use succeeds
     resp1 = await app_client.post(
         "/api/refresh",
-        json={"refresh_token": refresh_token},
+        cookies={REFRESH_COOKIE: refresh_cookie},
     )
     assert resp1.status_code == 200
 
     # Second use of same token fails
     resp2 = await app_client.post(
         "/api/refresh",
-        json={"refresh_token": refresh_token},
+        cookies={REFRESH_COOKIE: refresh_cookie},
     )
     assert resp2.status_code == 401
 
@@ -172,11 +188,15 @@ async def test_refresh_concurrent_reuse(app_client: httpx.AsyncClient):
         "/api/register",
         json={"username": "raceuser", "password": "password123"},
     )
-    refresh_token = reg.json()["refresh_token"]
+    refresh_cookie = _get_refresh_cookie(reg)
 
     results = await asyncio.gather(
-        app_client.post("/api/refresh", json={"refresh_token": refresh_token}),
-        app_client.post("/api/refresh", json={"refresh_token": refresh_token}),
+        app_client.post(
+            "/api/refresh", cookies={REFRESH_COOKIE: refresh_cookie}
+        ),
+        app_client.post(
+            "/api/refresh", cookies={REFRESH_COOKIE: refresh_cookie}
+        ),
     )
     status_codes = sorted(r.status_code for r in results)
     assert status_codes == [200, 401]
@@ -185,6 +205,39 @@ async def test_refresh_concurrent_reuse(app_client: httpx.AsyncClient):
 async def test_refresh_invalid_token(app_client: httpx.AsyncClient):
     resp = await app_client.post(
         "/api/refresh",
-        json={"refresh_token": "completely-invalid-token"},
+        cookies={REFRESH_COOKIE: "completely-invalid-token"},
     )
     assert resp.status_code == 401
+
+
+async def test_refresh_no_cookie(app_client: httpx.AsyncClient):
+    resp = await app_client.post("/api/refresh")
+    assert resp.status_code == 401
+
+
+async def test_logout_clears_cookie(app_client: httpx.AsyncClient):
+    reg = await app_client.post(
+        "/api/register",
+        json={"username": "logoutuser", "password": "password123"},
+    )
+    refresh_cookie = _get_refresh_cookie(reg)
+    assert refresh_cookie is not None
+
+    resp = await app_client.post(
+        "/api/logout",
+        cookies={REFRESH_COOKIE: refresh_cookie},
+    )
+    assert resp.status_code == 204
+
+    # Refresh token should be revoked after logout
+    resp2 = await app_client.post(
+        "/api/refresh",
+        cookies={REFRESH_COOKIE: refresh_cookie},
+    )
+    assert resp2.status_code == 401
+
+
+async def test_logout_without_cookie(app_client: httpx.AsyncClient):
+    """Logout without a cookie should succeed silently."""
+    resp = await app_client.post("/api/logout")
+    assert resp.status_code == 204

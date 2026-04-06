@@ -5,4 +5,10 @@ export default antfu({
   typescript: {
     tsconfigPath: './tsconfig.app.json',
   },
+}, {
+  files: ['**/*.test.ts'],
+  rules: {
+    'ts/no-unsafe-call': 'off',
+    'ts/no-unsafe-member-access': 'off',
+  },
 })

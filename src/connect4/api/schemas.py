@@ -13,14 +13,10 @@ class LoginRequest(BaseModel):
     password: str = Field(max_length=72)
 
 
-class RefreshRequest(BaseModel):
-    refresh_token: str
-
-
 class TokenResponse(BaseModel):
     access_token: str
-    refresh_token: str
     token_type: str = "bearer"
+    username: str
 
 
 # --- Games ---

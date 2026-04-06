@@ -81,25 +81,25 @@ async def test_refresh_rate_limit(rate_limited_client: httpx.AsyncClient):
 
     # Temporarily disable rate limiting to register 11 users for setup
     limiter.enabled = False
-    tokens = []
+    cookies = []
     for i in range(11):
         reg = await rate_limited_client.post(
             "/register",
             json={"username": f"refreshrl{i}", "password": "password123"},
         )
-        tokens.append(reg.json()["refresh_token"])
+        cookies.append(reg.cookies.get("refresh_token"))
     limiter.enabled = True
     limiter.reset()
 
     for i in range(10):
         resp = await rate_limited_client.post(
             "/refresh",
-            json={"refresh_token": tokens[i]},
+            cookies={"refresh_token": cookies[i]},
         )
         assert resp.status_code == 200, f"Request {i + 1} should succeed"
 
     resp = await rate_limited_client.post(
         "/refresh",
-        json={"refresh_token": tokens[10]},
+        cookies={"refresh_token": cookies[10]},
     )
     assert resp.status_code == 429

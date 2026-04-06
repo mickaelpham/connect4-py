@@ -94,12 +94,26 @@
 
 ## Phase 8: Auth Pages & Token Management
 
-- [ ] `LoginPage` component — username + password form, calls `POST /login`
-- [ ] `RegisterPage` component — username + password form, calls `POST /register`, auto-login on success
-- [ ] Auth store (`$state`): holds access token in memory (never localStorage)
-- [ ] `apiFetch` wrapper — injects `Authorization` header, intercepts 401, calls `POST /refresh` transparently, retries original request
-- [ ] Logout: clears token state, redirects to `/login`
-- [ ] Tests: `apiFetch` 401 intercept + token refresh retry (MSW), auth store state transitions, login/register form submission + error display
+### Backend changes
+- [x] Add `username` field to `TokenResponse` (login/register/refresh responses include it)
+- [x] Refresh token as `httpOnly` cookie (`Set-Cookie` on login/register/refresh; `POST /refresh` reads from cookie instead of JSON body)
+  - Cookie flags: `httpOnly`, `secure`, `sameSite=strict`, `path=/api/refresh`, 7-day `max_age`
+  - Removed `RefreshRequest` schema (no longer needed)
+- [x] `POST /api/logout` endpoint — revokes refresh token + clears cookie (204 response)
+- [x] CORS updated with `allow_credentials=True`
+- [x] Backend tests updated for cookie-based flow — 108 tests pass (2 new logout tests)
+
+### Frontend
+- [x] `src/auth/validation.ts` — shared validation constants (synced with `src/connect4/api/schemas.py`): username 3–20 chars `\w+`, password 8–72 chars
+- [x] `src/shared/api.ts` — typed `apiFetch` wrapper with 401 intercept + refresh retry, `ApiError` class, typed helpers: `login`, `register`, `logout`, `createGame`, `joinGame`, `getGame`, `getGames`, `getMoves`, `playMove`
+- [x] Auth store (`$state`): access token in memory (never localStorage), refresh token in `httpOnly` cookie (invisible to JS), `initialized` flag for app load
+- [x] `App.svelte` — calls `tryRefresh()` on mount to restore session from cookie, shows "Loading..." until initialized
+- [x] `LoginPage` component — username + password form, client-side validation, calls `POST /api/login`, error display, "Don't have an account?" link
+- [x] `RegisterPage` component — username + password form, client-side validation, calls `POST /api/register`, auto-login on success, "Already have an account?" link
+- [x] Logout: calls `POST /api/logout` (best-effort), clears token state, redirects to `/login`
+- [x] `vitest.config.ts` — added `resolve.conditions: ['browser']` for Svelte 5 component tests
+- [x] `eslint.config.ts` — disabled `no-unsafe-call`/`no-unsafe-member-access` in `*.test.ts` (testing-library type resolution)
+- [x] Tests: 49 frontend tests pass (33 new) — validation logic (10), LoginPage (7), RegisterPage (7), apiFetch 401 intercept + refresh retry (5), auth store + login/register API (4)
 
 ## Phase 9: Game Lobby
 
