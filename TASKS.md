@@ -78,13 +78,19 @@
 
 ## Phase 7: Router & Layout Shell
 
-- [ ] Set up Vitest + @testing-library/svelte + jsdom (config, npm scripts, Makefile `fe-test` target)
-- [ ] Set up MSW (Mock Service Worker) for API mocking in tests
-- [ ] Hand-rolled history router (~30 lines): push/replace/listen on `popstate`
-- [ ] Route table: `/login`, `/register`, `/` (lobby), `/games/:id`
-- [ ] App layout shell: nav bar (logo, logged-in player name, logout button), `<main>` slot
-- [ ] Redirect unauthenticated users to `/login`
-- [ ] Tests: route matching, `navigate()`/`back()`, auth redirect logic
+- [x] Set up Vitest + @testing-library/svelte + happy-dom (`vitest.config.ts`, `npm test`/`test:watch`, Makefile `fe-test`)
+  - happy-dom over jsdom (jsdom v29 has ESM compat issues with Node)
+  - `vitest/globals` added to `tsconfig.app.json` types
+  - Test infra in `frontend/test/` (setup, server, handlers), component tests co-located in `src/`
+- [x] Set up MSW (Mock Service Worker) for API mocking in tests
+  - `test/handlers.ts` — shared default handlers, `test/server.ts` — MSW server
+  - Wired into `test/setup.ts`: start/reset/close lifecycle, `onUnhandledRequest: 'error'`
+  - Per-test overrides via `server.use(...)`
+- [x] Hand-rolled history router (~30 lines): push/replace/listen on `popstate`
+- [x] Route table: `/login`, `/register`, `/` (lobby), `/games/:id`
+- [x] App layout shell: nav bar (logo, logged-in player name, logout button), `<main>` slot
+- [x] Redirect unauthenticated users to `/login`
+- [x] Tests: route matching, `navigate()`/`back()`, auth redirect logic (`src/router.test.ts` — 13 tests)
 
 ## Phase 8: Auth Pages & Token Management
 

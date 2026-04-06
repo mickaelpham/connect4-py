@@ -1,4 +1,4 @@
-.PHONY: test lint format check db-up db-down migrate serve fe-dev fe-build fe-lint fe-lint-fix
+.PHONY: test lint format check db-up db-down migrate serve fe-dev fe-build fe-test fe-lint fe-lint-fix
 
 test:
 	uv run pytest
@@ -30,6 +30,9 @@ fe-dev:
 
 fe-build:
 	cd frontend && npm run build
+
+fe-test:
+	cd frontend && npm test
 
 fe-lint:
 	cd frontend && npm run lint

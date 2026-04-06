@@ -9,7 +9,7 @@ const GAMES_RE = /^\/games\/([^/]+)$/
 
 const PUBLIC_PAGES = new Set<Route['page']>(['login', 'register'])
 
-function parseRoute(path: string): Route {
+export function parseRoute(path: string): Route {
   if (path === '/login')
     return { page: 'login', params: {} }
   if (path === '/register')

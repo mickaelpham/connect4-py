@@ -6,7 +6,7 @@
     "moduleDetection": "force",
     "useDefineForClassFields": true,
     "module": "ESNext",
-    "types": ["svelte", "vite/client"],
+    "types": ["svelte", "vite/client", "vitest/globals"],
     /**
      * Typecheck JS in `.svelte` and `.js` files by default.
      * Disable checkJs if you'd like to use dynamic types in JS.
