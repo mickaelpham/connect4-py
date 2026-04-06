@@ -1,19 +1,13 @@
 import hashlib
-import os
 import secrets
 from datetime import UTC, datetime, timedelta
 
 import jwt
 
+from connect4.config import get_settings
+
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 REFRESH_TOKEN_EXPIRE_DAYS = 7
-
-
-def _get_secret() -> str:
-    secret = os.environ.get("JWT_SECRET")
-    if not secret:
-        raise RuntimeError("JWT_SECRET environment variable is not set")
-    return secret
 
 
 def create_access_token(player_id: str, username: str) -> str:
@@ -27,13 +21,13 @@ def create_access_token(player_id: str, username: str) -> str:
         "iat": now,
         "exp": now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     }
-    return jwt.encode(payload, _get_secret(), algorithm="HS256")
+    return jwt.encode(payload, get_settings().jwt_secret, algorithm="HS256")
 
 
 def decode_access_token(token: str) -> dict:
     payload = jwt.decode(
         token,
-        _get_secret(),
+        get_settings().jwt_secret,
         algorithms=["HS256"],
         issuer="connect4",
         audience="connect4",

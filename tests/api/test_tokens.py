@@ -9,13 +9,7 @@ from connect4.api.tokens import (
     decode_access_token,
     hash_refresh_token,
 )
-
-SECRET = "test-secret-that-is-at-least-32-bytes!"
-
-
-@pytest.fixture(autouse=True)
-def _set_jwt_secret(monkeypatch):
-    monkeypatch.setenv("JWT_SECRET", SECRET)
+from connect4.config import get_settings
 
 
 def test_create_and_decode_access_token():
@@ -27,6 +21,7 @@ def test_create_and_decode_access_token():
 
 
 def test_access_token_expired():
+    secret = get_settings().jwt_secret
     now = datetime.now(UTC)
     payload = {
         "sub": "player123",
@@ -37,7 +32,7 @@ def test_access_token_expired():
         "iat": now - timedelta(hours=1),
         "exp": now - timedelta(minutes=1),
     }
-    token = jwt.encode(payload, SECRET, algorithm="HS256")
+    token = jwt.encode(payload, secret, algorithm="HS256")
     with pytest.raises(jwt.ExpiredSignatureError):
         decode_access_token(token)
 
@@ -48,6 +43,7 @@ def test_decode_invalid_token():
 
 
 def test_decode_rejects_non_access_token():
+    secret = get_settings().jwt_secret
     payload = {
         "sub": "player123",
         "type": "refresh",
@@ -55,7 +51,7 @@ def test_decode_rejects_non_access_token():
         "aud": "connect4",
         "exp": datetime.now(UTC) + timedelta(hours=1),
     }
-    token = jwt.encode(payload, SECRET, algorithm="HS256")
+    token = jwt.encode(payload, secret, algorithm="HS256")
     with pytest.raises(jwt.InvalidTokenError, match="Not an access token"):
         decode_access_token(token)
 
