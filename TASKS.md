@@ -138,15 +138,19 @@
 
 ## Phase 10: Game Board & Play
 
-- [ ] `GamePage` component — fetches `GET /games/:id` and `GET /games/:id/moves`
-- [ ] `Board` component — 7×6 HTML/CSS grid, renders pieces as colored circles
-- [ ] Column hover indicator (highlights column on mouseover when it's your turn)
-- [ ] Click to play — `POST /games/:id/moves`, optimistic update
-- [ ] CSS transition for piece drop animation
-- [ ] Win highlight — highlight the four winning cells
-- [ ] Game status display: waiting for opponent, your turn, opponent's turn, you won, you lost, draw
-- [ ] Polling fallback (2s) if SSE connection drops, stops when game is over
-- [ ] Tests: board rendering from game state, click-to-play dispatches move, optimistic update + rollback on error, win cell highlighting, status display per game state
+- [x] `GamePage` component — fetches `GET /games/:id`, orchestrates state/polling/optimistic updates
+- [x] `Board` component — 7×6 CSS grid, renders red/yellow pieces on `#213547` dark board
+- [x] Column hover indicator (ghost piece on mouseover when it's your turn)
+- [x] Click to play — `POST /games/:id/moves`, optimistic update with rollback on error
+- [x] CSS transition for piece drop animation (simple `translateY`)
+- [x] Win highlight — outline 4 winning cells (white box-shadow) + dim other pieces (opacity 0.3)
+- [x] Game status display: waiting for opponent, your turn, opponent's turn, you won, you lost, draw
+- [x] `WaitingView` — separate view with share link + copy button for game creator
+- [x] `InfoPanel` — right panel with status badge, player list, error display, move history placeholder
+- [x] Two-column layout: board left, info panel right
+- [x] `winCells.ts` — pure function to find 4 winning cell coordinates from board array
+- [x] Polling (2s) while game is active, stops when game ends
+- [x] Tests: 22 new (8 winCells unit + 14 GamePage component with MSW) — 93 frontend total
 
 ## Phase 11: SSE Real-Time Updates
 
@@ -158,6 +162,11 @@
 - [ ] Frontend: auto-reconnect with full state refetch on reconnection
 - [ ] Frontend: close SSE connection when navigating away from game page
 - [ ] Frontend tests: SSE reconnect logic, state sync on reconnection, connection cleanup on navigate-away
+
+## Phase 11.5: Game Page Enhancements
+
+- [ ] Move history panel — display move-by-move list in InfoPanel (replace placeholder)
+- [ ] Bounce/spring drop animation (upgrade from simple `translateY` to bounce easing)
 
 ## Phase 12: Error Handling & Polish
 
