@@ -19,6 +19,7 @@ from connect4.db.games import (
     create_game,
     get_game_by_id,
     join_game,
+    list_open_games,
     list_player_games,
     update_game_status,
 )
@@ -58,6 +59,8 @@ def _game_response(
     p1: PlayerInfo,
     p2: PlayerInfo | None,
     winner: PlayerInfo | None,
+    *,
+    move_count: int = 0,
 ) -> GameResponse:
     return GameResponse(
         id=game["id"],
@@ -67,6 +70,7 @@ def _game_response(
         winner=winner,
         created_at=game["created_at"].isoformat(),
         updated_at=game["updated_at"].isoformat(),
+        move_count=move_count,
     )
 
 
@@ -188,6 +192,31 @@ async def play_move_endpoint(
     )
 
 
+@router.get("/open", response_model=list[GameResponse])
+@limiter.limit("30/minute")
+async def list_open_games_endpoint(
+    request: Request,
+    conn: asyncpg.Connection = Depends(get_db_conn),
+    player: asyncpg.Record = Depends(get_current_player),
+) -> list[GameResponse]:
+    games = await list_open_games(conn, player["id"])
+    player_cache: dict[str, PlayerInfo] = {}
+
+    async def _get_player(pid: str) -> PlayerInfo:
+        if pid not in player_cache:
+            p = await get_player_by_id(conn, pid)
+            player_cache[pid] = _player_info(p)
+        return player_cache[pid]
+
+    results = []
+    for g in games:
+        p1 = await _get_player(g["player1_id"])
+        results.append(
+            _game_response(g, p1, None, None, move_count=g["move_count"])
+        )
+    return results
+
+
 @router.get("/{game_id}", response_model=GameDetailResponse)
 @limiter.limit("30/minute")
 async def get_game_endpoint(
@@ -210,6 +239,7 @@ async def get_game_endpoint(
         winner=winner,
         created_at=game["created_at"].isoformat(),
         updated_at=game["updated_at"].isoformat(),
+        move_count=len(moves),
         board=_board_to_row_major(game_engine),
         current_player=_current_player_number(game, game_engine),
     )
@@ -274,7 +304,7 @@ async def list_games_endpoint(
         winner = None
         if g["winner_id"]:
             winner = await _get_player(g["winner_id"])
-        results.append(_game_response(g, p1, p2, winner))
+        results.append(_game_response(g, p1, p2, winner, move_count=g["move_count"]))
     return PaginatedGamesResponse(
         games=results,
         next_cursor=games[-1]["id"] if has_next else None,

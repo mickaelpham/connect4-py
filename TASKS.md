@@ -117,12 +117,24 @@
 
 ## Phase 9: Game Lobby
 
-- [ ] `LobbyPage` component with two sections:
-  - [ ] "Your games" — `GET /games` with cursor pagination, shows status/opponent/last move
-  - [ ] "Open games" — `GET /games?status=waiting` (needs new backend filter), shows creator + join button
-- [ ] "New game" button — `POST /games`, navigates to `/games/:id`
-- [ ] Join game — `POST /games/:id/join`, navigates to `/games/:id`
-- [ ] Tests: game list rendering, pagination, create/join actions (MSW)
+### Backend changes
+- [x] Added `move_count: int = 0` to `GameResponse` schema (derived from `LEFT JOIN moves` + `COUNT`)
+- [x] Modified `list_player_games()` to join moves table and return `move_count`
+- [x] New `list_open_games()` repo function — returns waiting games excluding own (`WHERE status = 'waiting' AND player1_id != $1`)
+- [x] New `GET /api/games/open` endpoint — returns `list[GameResponse]`, no pagination, 20 most recent
+- [x] Updated `_game_response()` helper and `get_game_endpoint` to pass `move_count`
+- [x] Backend tests: 6 new (move_count in list, open games visibility/exclusion/auth, DB-level open games) — 114 total
+
+### Frontend
+- [x] Added `move_count: number` to `GameResponse` type, added `getOpenGames()` API helper
+- [x] `gameStatus.ts` — `getDisplayStatus(game, username)` derives your-turn/their-turn/you-won/you-lost/draw/waiting from `move_count` + player position; `statusLabel()` for display strings
+- [x] `LobbyPage` component with two sections:
+  - [x] "Your Games" — `GET /games` with cursor pagination, shows opponent, status badge (color-coded), relative time
+  - [x] "Open Games" — `GET /api/games/open`, shows creator + join button
+- [x] "New Game" button — `POST /games`, navigates to `/games/:id`
+- [x] Join game — `POST /games/:id/join`, navigates to `/games/:id`
+- [x] No auto-refresh (deferred to SSE in Phase 11)
+- [x] Tests: 22 new (10 gameStatus unit, 11 LobbyPage component with MSW, 1 waitingGame status) — 71 frontend total
 
 ## Phase 10: Game Board & Play
 

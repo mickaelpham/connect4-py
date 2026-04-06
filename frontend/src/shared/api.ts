@@ -122,6 +122,7 @@ export interface GameResponse {
   winner: PlayerInfo | null
   created_at: string
   updated_at: string
+  move_count: number
 }
 
 export interface GameDetailResponse extends GameResponse {
@@ -157,6 +158,10 @@ export async function getGame(gameId: string): Promise<GameDetailResponse> {
 export async function getGames(cursor?: string): Promise<PaginatedGamesResponse> {
   const params = cursor !== undefined ? `?cursor=${cursor}` : ''
   return apiFetch<PaginatedGamesResponse>(`/api/games${params}`, {})
+}
+
+export async function getOpenGames(): Promise<GameResponse[]> {
+  return apiFetch<GameResponse[]>('/api/games/open', {})
 }
 
 export async function getMoves(gameId: string): Promise<MoveResponse[]> {

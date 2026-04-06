@@ -360,3 +360,72 @@ async def test_list_games_empty(app_client: httpx.AsyncClient):
 async def test_list_games_unauthenticated(app_client: httpx.AsyncClient):
     resp = await app_client.get("/api/games")
     assert resp.status_code == 401
+
+
+async def test_list_games_includes_move_count(app_client: httpx.AsyncClient):
+    h1 = await _auth_header(app_client, "movecount_p1")
+    h2 = await _auth_header(app_client, "movecount_p2")
+    game = await _create_game(app_client, h1)
+    await _join_game(app_client, game["id"], h2)
+
+    # Play 2 moves
+    await app_client.post(
+        f"/api/games/{game['id']}/moves", json={"column": 0}, headers=h1
+    )
+    await app_client.post(
+        f"/api/games/{game['id']}/moves", json={"column": 1}, headers=h2
+    )
+
+    resp = await app_client.get("/api/games", headers=h1)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["games"]) == 1
+    assert data["games"][0]["move_count"] == 2
+
+
+# --- GET /games/open ---
+
+
+async def test_list_open_games(app_client: httpx.AsyncClient):
+    h1 = await _auth_header(app_client, "open_p1")
+    h2 = await _auth_header(app_client, "open_p2")
+    game = await _create_game(app_client, h1)
+
+    resp = await app_client.get("/api/games/open", headers=h2)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+    assert len(data) >= 1
+    game_ids = {g["id"] for g in data}
+    assert game["id"] in game_ids
+    assert data[0]["move_count"] == 0
+
+
+async def test_list_open_games_excludes_own(app_client: httpx.AsyncClient):
+    h1 = await _auth_header(app_client, "openown_p1")
+    game = await _create_game(app_client, h1)
+
+    resp = await app_client.get("/api/games/open", headers=h1)
+    assert resp.status_code == 200
+    data = resp.json()
+    game_ids = {g["id"] for g in data}
+    assert game["id"] not in game_ids
+
+
+async def test_list_open_games_excludes_non_waiting(app_client: httpx.AsyncClient):
+    h1 = await _auth_header(app_client, "opennw_p1")
+    h2 = await _auth_header(app_client, "opennw_p2")
+    h3 = await _auth_header(app_client, "opennw_p3")
+    game = await _create_game(app_client, h1)
+    await _join_game(app_client, game["id"], h2)
+
+    resp = await app_client.get("/api/games/open", headers=h3)
+    assert resp.status_code == 200
+    data = resp.json()
+    game_ids = {g["id"] for g in data}
+    assert game["id"] not in game_ids
+
+
+async def test_list_open_games_unauthenticated(app_client: httpx.AsyncClient):
+    resp = await app_client.get("/api/games/open")
+    assert resp.status_code == 401

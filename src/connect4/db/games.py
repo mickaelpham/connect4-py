@@ -64,6 +64,27 @@ async def update_game_status(
     )
 
 
+async def list_open_games(
+    conn: asyncpg.Connection,
+    player_id: str,
+    *,
+    limit: int = 20,
+) -> list[asyncpg.Record]:
+    return await conn.fetch(
+        """
+        SELECT g.*, COUNT(m.id)::int AS move_count
+        FROM games g
+        LEFT JOIN moves m ON m.game_id = g.id
+        WHERE g.status = 'waiting' AND g.player1_id != $1
+        GROUP BY g.id
+        ORDER BY g.id DESC
+        LIMIT $2
+        """,
+        player_id,
+        limit,
+    )
+
+
 async def list_player_games(
     conn: asyncpg.Connection,
     player_id: str,
@@ -74,10 +95,13 @@ async def list_player_games(
     if cursor is not None:
         return await conn.fetch(
             """
-            SELECT * FROM games
-            WHERE (player1_id = $1 OR player2_id = $1)
-              AND id < $2
-            ORDER BY id DESC
+            SELECT g.*, COUNT(m.id)::int AS move_count
+            FROM games g
+            LEFT JOIN moves m ON m.game_id = g.id
+            WHERE (g.player1_id = $1 OR g.player2_id = $1)
+              AND g.id < $2
+            GROUP BY g.id
+            ORDER BY g.id DESC
             LIMIT $3
             """,
             player_id,
@@ -86,9 +110,12 @@ async def list_player_games(
         )
     return await conn.fetch(
         """
-        SELECT * FROM games
-        WHERE player1_id = $1 OR player2_id = $1
-        ORDER BY id DESC
+        SELECT g.*, COUNT(m.id)::int AS move_count
+        FROM games g
+        LEFT JOIN moves m ON m.game_id = g.id
+        WHERE g.player1_id = $1 OR g.player2_id = $1
+        GROUP BY g.id
+        ORDER BY g.id DESC
         LIMIT $2
         """,
         player_id,

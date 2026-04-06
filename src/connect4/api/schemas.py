@@ -47,6 +47,7 @@ class GameResponse(BaseModel):
     winner: PlayerInfo | None
     created_at: str
     updated_at: str
+    move_count: int = 0
 
 
 class GameDetailResponse(GameResponse):
