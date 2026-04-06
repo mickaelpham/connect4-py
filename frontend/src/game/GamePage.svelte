@@ -5,7 +5,7 @@
   import { getAuth } from '../auth/auth.svelte'
   import { getDisplayStatus } from '../lobby/gameStatus'
   import { navigate } from '../router.svelte'
-  import { ApiError, getGame, playMove } from '../shared/api'
+  import { ApiError, getGame, joinGame, playMove } from '../shared/api'
   import Board from './Board.svelte'
   import InfoPanel from './InfoPanel.svelte'
   import WaitingView from './WaitingView.svelte'
@@ -37,6 +37,10 @@
   const isCreatorWaiting = $derived(
     game?.status === 'waiting' && game.player1.username === auth.playerName,
   )
+  const canJoin = $derived(
+    game?.status === 'waiting' && game.player1.username !== auth.playerName && game.player2 === null,
+  )
+  let joining = $state(false)
 
   onMount(() => {
     loadGame()
@@ -54,10 +58,10 @@
     }
   }
 
-  // Polling: refetch every 2s while game is active
+  // Polling: refetch every 2s only while waiting for the opponent
   $effect(() => {
     if (!game) return
-    if (game.status !== 'in_progress' && game.status !== 'waiting') return
+    if (!isCreatorWaiting && status !== 'their-turn') return
 
     const interval = setInterval(async () => {
       try {
@@ -78,6 +82,22 @@
 
     return () => clearInterval(interval)
   })
+
+  async function handleJoin() {
+    if (!game) return
+    error = null
+    joining = true
+    try {
+      await joinGame(gameId)
+      game = await getGame(gameId)
+    }
+    catch (e) {
+      error = e instanceof ApiError ? e.detail : 'Failed to join game'
+    }
+    finally {
+      joining = false
+    }
+  }
 
   async function handleMove(column: number) {
     if (!game || pendingColumn !== null) return
@@ -124,6 +144,16 @@
   </div>
 {:else if isCreatorWaiting}
   <WaitingView {gameId} />
+{:else if canJoin}
+  <div class='join-view'>
+    <h2>{game.player1.username} is waiting for an opponent</h2>
+    {#if error}
+      <p class='error'>{error}</p>
+    {/if}
+    <button class='btn-primary' onclick={handleJoin} disabled={joining}>
+      {joining ? 'Joining...' : 'Join Game'}
+    </button>
+  </div>
 {:else}
   <div class='game-layout'>
     <Board
@@ -166,6 +196,31 @@
     border-radius: 4px;
     padding: 0.5rem;
     font-size: 0.875rem;
+  }
+
+  .join-view {
+    max-width: 480px;
+    margin: 0 auto;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .btn-primary {
+    padding: 0.5rem 1rem;
+    background: #213547;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .btn-secondary {

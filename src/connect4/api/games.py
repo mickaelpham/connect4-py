@@ -218,7 +218,7 @@ async def list_open_games_endpoint(
 
 
 @router.get("/{game_id}", response_model=GameDetailResponse)
-@limiter.limit("30/minute")
+@limiter.limit("60/minute")
 async def get_game_endpoint(
     game_id: str,
     request: Request,

@@ -302,4 +302,73 @@ describe('gamePage', () => {
     expect(await screen.findByRole('grid', { name: 'Connect 4 board' })).toBeInTheDocument()
     expect(screen.getByText('charlie')).toBeInTheDocument()
   })
+
+  it('shows join view when visiting someone else\'s waiting game', async () => {
+    mockGameApi({
+      ...waitingGame,
+      player1: { id: 'p3', username: 'charlie' },
+    })
+    render(GamePage, { props: { gameId: 'game1' } })
+    expect(await screen.findByText('charlie is waiting for an opponent')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Join Game' })).toBeInTheDocument()
+    // Should NOT show the board or waiting view
+    expect(screen.queryByRole('grid')).not.toBeInTheDocument()
+    expect(screen.queryByText('Waiting for opponent')).not.toBeInTheDocument()
+  })
+
+  it('joins game and shows board after clicking join', async () => {
+    const waitingForJoin = {
+      ...waitingGame,
+      player1: { id: 'p3', username: 'charlie' },
+    }
+    let joined = false
+    server.use(
+      http.get('/api/games/:gameId', () => {
+        if (joined) {
+          return HttpResponse.json({
+            ...baseGame,
+            player1: { id: 'p3', username: 'charlie' },
+            player2: { id: 'p1', username: 'alice' },
+          })
+        }
+        return HttpResponse.json(waitingForJoin)
+      }),
+      http.post('/api/games/:gameId/join', () => {
+        joined = true
+        return HttpResponse.json({
+          ...waitingForJoin,
+          player2: { id: 'p1', username: 'alice' },
+          status: 'in_progress',
+        })
+      }),
+    )
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(GamePage, { props: { gameId: 'game1' } })
+
+    await screen.findByText('charlie is waiting for an opponent')
+    await user.click(screen.getByRole('button', { name: 'Join Game' }))
+
+    expect(await screen.findByRole('grid', { name: 'Connect 4 board' })).toBeInTheDocument()
+  })
+
+  it('does not poll when viewing someone else\'s waiting game', async () => {
+    let fetchCount = 0
+    server.use(
+      http.get('/api/games/:gameId', () => {
+        fetchCount++
+        return HttpResponse.json({
+          ...waitingGame,
+          player1: { id: 'p3', username: 'charlie' },
+        })
+      }),
+    )
+
+    render(GamePage, { props: { gameId: 'game1' } })
+    await screen.findByText('charlie is waiting for an opponent')
+    const countAfterLoad = fetchCount
+
+    await vi.advanceTimersByTimeAsync(6000)
+    expect(fetchCount).toBe(countAfterLoad)
+  })
 })
