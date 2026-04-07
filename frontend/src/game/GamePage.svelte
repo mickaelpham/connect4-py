@@ -38,6 +38,9 @@
   const isCreatorWaiting = $derived(
     game?.status === 'waiting' && game.player1.username === auth.playerName,
   )
+  const shouldStream = $derived(
+    game !== null && (isCreatorWaiting || game.status === 'in_progress'),
+  )
   const canJoin = $derived(
     game?.status === 'waiting' && game.player1.username !== auth.playerName && game.player2 === null,
   )
@@ -60,9 +63,10 @@
   }
 
   // SSE: stream game events while game is active
+  // shouldStream is a $derived boolean — the effect only re-runs on status
+  // transitions (null→waiting, waiting→in_progress, in_progress→won/draw),
+  // NOT on every game state update from SSE events.
   $effect(() => {
-    if (!game) return
-    const shouldStream = isCreatorWaiting || game.status === 'in_progress'
     if (!shouldStream) return
 
     const stream = createGameStream(

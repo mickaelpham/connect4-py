@@ -422,6 +422,33 @@ describe('gamePage SSE', () => {
     expect(await screen.findByText('Their turn')).toBeInTheDocument()
   })
 
+  it('does not reconnect SSE when game state updates from events', async () => {
+    mockGameApi(baseGame)
+    render(GamePage, { props: { gameId: 'game1' } })
+    await screen.findByRole('grid', { name: 'Connect 4 board' })
+
+    const countAfterConnect = MockEventSource.instances.length
+
+    // Fire several move events — none should cause a new EventSource
+    const es = MockEventSource.latest()!
+    for (let move = 1; move <= 5; move++) {
+      const board = emptyBoard()
+      board[5][0] = 1
+      es._emit('move', {
+        ...baseGame,
+        board,
+        move_count: move,
+        current_player: move % 2 === 0 ? 1 : 2,
+      })
+      // Let Svelte flush effects
+      await vi.advanceTimersByTimeAsync(0)
+    }
+
+    expect(MockEventSource.instances.length).toBe(countAfterConnect)
+    // The original connection should still be open
+    expect(es.readyState).not.toBe(2)
+  })
+
   it('closes SSE on component unmount', async () => {
     mockGameApi(baseGame)
     const { unmount } = render(GamePage, { props: { gameId: 'game1' } })

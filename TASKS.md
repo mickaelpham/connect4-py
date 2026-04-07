@@ -162,7 +162,7 @@
 - [x] Frontend: replaced polling with SSE `$effect` in `GamePage.svelte`, optimistic moves confirmed by SSE (no re-fetch)
 - [x] Frontend: close SSE connection when navigating away from game page (effect cleanup)
 - [x] Frontend tests: 11 SSE tests (connect, events, reconnect, cleanup, error) + `MockEventSource` test utility
-- [ ] Investigate: `GET /games/:id/stream` appears to fire continuously — debug SSE connection/reconnect loop
+- [x] Fix: SSE reconnect loop — `$effect` was tracking `game` state directly, causing teardown/reconnect on every SSE event. Extracted `shouldStream` as `$derived` boolean so the effect only re-runs on status transitions.
 
 ## Phase 11.5: Game Page Enhancements
 
