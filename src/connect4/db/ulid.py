@@ -2,4 +2,4 @@ from ulid import ULID
 
 
 def generate_ulid() -> str:
-    return str(ULID())
+    return str(ULID())  # pyright: ignore[reportCallIssue]

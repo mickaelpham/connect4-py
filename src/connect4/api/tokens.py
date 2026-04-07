@@ -1,6 +1,7 @@
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import jwt
 
@@ -24,7 +25,7 @@ def create_access_token(player_id: str, username: str) -> str:
     return jwt.encode(payload, get_settings().jwt_secret, algorithm="HS256")
 
 
-def decode_access_token(token: str) -> dict:
+def decode_access_token(token: str) -> dict[str, Any]:
     payload = jwt.decode(
         token,
         get_settings().jwt_secret,

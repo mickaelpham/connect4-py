@@ -44,6 +44,7 @@ async def _resolve_players(
     game: asyncpg.Record,
 ) -> tuple[PlayerInfo, PlayerInfo | None, PlayerInfo | None]:
     p1 = await get_player_by_id(conn, game["player1_id"])
+    assert p1 is not None
     p2 = None
     if game["player2_id"]:
         p2 = await get_player_by_id(conn, game["player2_id"])
@@ -155,6 +156,7 @@ async def join_game_endpoint(
         updated = await join_game(conn, game_id, player["id"])
         await _notify_game_event(conn, game_id, "player_joined")
     p1 = await get_player_by_id(conn, game["player1_id"])
+    assert p1 is not None
     return _game_response(updated, _player_info(p1), _player_info(player), None)
 
 
@@ -197,6 +199,7 @@ async def play_move_endpoint(
 
         move_number = len(moves) + 1
         move = await create_move(conn, game_id, player["id"], body.column, move_number)
+        assert move is not None
 
         if game_engine.status.value != game["status"]:
             winner_id = None
@@ -234,6 +237,7 @@ async def list_open_games_endpoint(
     async def _get_player(pid: str) -> PlayerInfo:
         if pid not in player_cache:
             p = await get_player_by_id(conn, pid)
+            assert p is not None
             player_cache[pid] = _player_info(p)
         return player_cache[pid]
 
@@ -292,6 +296,7 @@ async def get_moves_endpoint(
         pid = move["player_id"]
         if pid not in player_cache:
             p = await get_player_by_id(conn, pid)
+            assert p is not None
             player_cache[pid] = _player_info(p)
         result.append(
             MoveResponse(
@@ -323,6 +328,7 @@ async def list_games_endpoint(
     async def _get_player(pid: str) -> PlayerInfo:
         if pid not in player_cache:
             p = await get_player_by_id(conn, pid)
+            assert p is not None
             player_cache[pid] = _player_info(p)
         return player_cache[pid]
 
@@ -345,6 +351,7 @@ async def _build_game_detail(
     game_id: str,
 ) -> GameDetailResponse:
     game = await get_game_by_id(conn, game_id)
+    assert game is not None
     p1, p2, winner = await _resolve_players(conn, game)
     moves = await get_game_moves(conn, game_id)
     game_engine = _replay_game(moves)

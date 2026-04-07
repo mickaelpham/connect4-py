@@ -20,6 +20,7 @@ class GameEventBroker:
 
     async def start(self, dsn: str) -> None:
         self._conn = await asyncpg.connect(dsn)
+        assert self._conn is not None
         await self._conn.add_listener("game_events", self._on_notification)
 
     async def stop(self) -> None:
