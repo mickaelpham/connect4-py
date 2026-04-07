@@ -72,6 +72,7 @@
     const stream = createGameStream(
       gameId,
       (event) => {
+        const prevBoard = game?.board
         game = event.data
         if (pendingColumn !== null) {
           pendingColumn = null
@@ -79,6 +80,20 @@
           setTimeout(() => {
             lastMoveCell = null
           }, 300)
+        }
+        else if ((event.type === 'move' || event.type === 'game_over') && prevBoard) {
+          const newBoard = event.data.board
+          for (let r = 0; r < newBoard.length; r++) {
+            for (let c = 0; c < newBoard[r].length; c++) {
+              if (prevBoard[r][c] === 0 && newBoard[r][c] !== 0) {
+                lastMoveCell = { row: r, col: c }
+                setTimeout(() => {
+                  lastMoveCell = null
+                }, 300)
+                return
+              }
+            }
+          }
         }
       },
       () => {

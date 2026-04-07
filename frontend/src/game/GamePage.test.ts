@@ -345,6 +345,43 @@ describe('gamePage SSE', () => {
     })
   })
 
+  it('animates opponent piece drop on SSE move event', async () => {
+    // Start with one piece already on board (alice played col 0)
+    const initialBoard = emptyBoard()
+    initialBoard[5][0] = 1
+    mockGameApi({ ...baseGame, board: initialBoard, move_count: 1, current_player: 2 })
+    render(GamePage, { props: { gameId: 'game1' } })
+    await screen.findByRole('grid', { name: 'Connect 4 board' })
+
+    // No piece should be animating yet
+    expect(document.querySelector('.piece.dropping')).toBeNull()
+
+    // Opponent (player 2) plays in column 1 via SSE
+    const updatedBoard = emptyBoard()
+    updatedBoard[5][0] = 1
+    updatedBoard[5][1] = 2
+
+    const es = MockEventSource.latest()!
+    es._emit('move', {
+      ...baseGame,
+      board: updatedBoard,
+      move_count: 2,
+      current_player: 1,
+    })
+
+    // The new piece at row 5, col 1 should have the dropping class
+    await waitFor(() => {
+      const dropping = document.querySelector('.piece.dropping')
+      expect(dropping).not.toBeNull()
+    })
+
+    // After 300ms the animation class should be cleared
+    await vi.advanceTimersByTimeAsync(300)
+    await waitFor(() => {
+      expect(document.querySelector('.piece.dropping')).toBeNull()
+    })
+  })
+
   it('transitions from waiting to board on player_joined event', async () => {
     mockGameApi(waitingGame)
     render(GamePage, { props: { gameId: 'game1' } })
