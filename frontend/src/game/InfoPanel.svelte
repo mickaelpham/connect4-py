@@ -12,6 +12,14 @@
   }
 
   const { game, status, error, username }: Props = $props()
+
+  let moveListEl: HTMLDivElement | undefined = $state()
+
+  $effect(() => {
+    if (game.moves.length && moveListEl) {
+      moveListEl.scrollTop = moveListEl.scrollHeight
+    }
+  })
 </script>
 
 <div class='info-panel'>
@@ -42,9 +50,22 @@
     <p class='error'>{error}</p>
   {/if}
 
-  <div class='move-history-placeholder'>
+  <div class='move-history'>
     <h4>Move History</h4>
-    <p class='placeholder-text'>Coming soon</p>
+    {#if game.moves.length === 0}
+      <p class='empty-text'>No moves yet</p>
+    {:else}
+      <div class='move-list' bind:this={moveListEl}>
+        {#each game.moves as move (move.move_number)}
+          <div class='move-entry'>
+            <span class='move-num'>{move.move_number}.</span>
+            <span class='piece-dot {move.player.id === game.player1.id ? 'red' : 'yellow'}'></span>
+            <span>{move.player.username}</span>
+            <span class='move-col'>Col {move.column + 1}</span>
+          </div>
+        {/each}
+      </div>
+    {/if}
   </div>
 
   <button class='btn-secondary' onclick={() => navigate('/')}>Back to Lobby</button>
@@ -146,18 +167,44 @@
     font-size: 0.875rem;
   }
 
-  .move-history-placeholder {
-    border: 1px dashed #d1d5db;
+  .move-history {
+    border: 1px solid #d1d5db;
     border-radius: 4px;
     padding: 0.75rem;
   }
 
-  .move-history-placeholder h4 {
+  .move-history h4 {
     font-size: 0.875rem;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
   }
 
-  .placeholder-text {
+  .move-list {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .move-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8rem;
+  }
+
+  .move-num {
+    color: #6b7280;
+    min-width: 1.5rem;
+    text-align: right;
+  }
+
+  .move-col {
+    color: #6b7280;
+    margin-left: auto;
+  }
+
+  .empty-text {
     color: #9ca3af;
     font-size: 0.8rem;
   }

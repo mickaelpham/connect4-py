@@ -348,6 +348,19 @@ async def _build_game_detail(
     p1, p2, winner = await _resolve_players(conn, game)
     moves = await get_game_moves(conn, game_id)
     game_engine = _replay_game(moves)
+    player_map = {p1.id: p1}
+    if p2 is not None:
+        player_map[p2.id] = p2
+    move_responses = [
+        MoveResponse(
+            id=m["id"],
+            player=player_map[m["player_id"]],
+            column=m["column"],
+            move_number=m["move_number"],
+            created_at=m["created_at"].isoformat(),
+        )
+        for m in moves
+    ]
     return GameDetailResponse(
         id=game["id"],
         player1=p1,
@@ -359,6 +372,7 @@ async def _build_game_detail(
         move_count=len(moves),
         board=_board_to_row_major(game_engine),
         current_player=_current_player_number(game, game_engine),
+        moves=move_responses,
     )
 
 

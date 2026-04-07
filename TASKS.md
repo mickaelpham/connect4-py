@@ -166,8 +166,8 @@
 
 ## Phase 11.5: Game Page Enhancements
 
-- [ ] Move history panel — display move-by-move list in InfoPanel (replace placeholder)
-- [ ] Bounce/spring drop animation (upgrade from simple `translateY` to bounce easing)
+- [x] Move history panel — display move-by-move list in InfoPanel (replace placeholder)
+- [~] ~~Bounce/spring drop animation (upgrade from simple `translateY` to bounce easing)~~ — won't do, current animation is good enough
 
 ## Phase 12: Error Handling & Polish
 

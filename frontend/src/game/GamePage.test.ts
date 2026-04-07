@@ -23,6 +23,7 @@ const baseGame = {
   move_count: 0,
   board: emptyBoard(),
   current_player: 1,
+  moves: [],
 }
 
 const waitingGame = {

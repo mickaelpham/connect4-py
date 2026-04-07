@@ -128,6 +128,7 @@ export interface GameResponse {
 export interface GameDetailResponse extends GameResponse {
   board: number[][]
   current_player: number | null
+  moves: MoveResponse[]
 }
 
 export interface MoveResponse {

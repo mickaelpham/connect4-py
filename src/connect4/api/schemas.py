@@ -53,6 +53,7 @@ class GameResponse(BaseModel):
 class GameDetailResponse(GameResponse):
     board: list[list[int]]
     current_player: int | None
+    moves: list[MoveResponse] = []
 
 
 class PaginatedGamesResponse(BaseModel):
