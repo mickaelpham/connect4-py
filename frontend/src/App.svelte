@@ -7,6 +7,8 @@
   import LobbyPage from './lobby/LobbyPage.svelte'
   import { getRoute, navigate, refreshRoute } from './router.svelte'
   import { logout, tryRefresh } from './shared/api'
+  import NotFoundPage from './shared/NotFoundPage.svelte'
+  import Toast from './shared/Toast.svelte'
 
   const route = getRoute()
   const auth = getAuth()
@@ -51,8 +53,12 @@
     <LobbyPage />
   {:else if route.current.page === 'game'}
     <GamePage gameId={route.current.params.id} />
+  {:else if route.current.page === 'not-found'}
+    <NotFoundPage />
   {/if}
 </main>
+
+<Toast />
 
 <style>
   .navbar {

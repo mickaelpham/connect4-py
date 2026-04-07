@@ -7,6 +7,7 @@
   import { navigate } from '../router.svelte'
   import { ApiError, getGame, joinGame, playMove } from '../shared/api'
   import { createGameStream } from '../shared/gameStream'
+  import Skeleton from '../shared/Skeleton.svelte'
   import Board from './Board.svelte'
   import InfoPanel from './InfoPanel.svelte'
   import WaitingView from './WaitingView.svelte'
@@ -67,7 +68,8 @@
   // transitions (null→waiting, waiting→in_progress, in_progress→won/draw),
   // NOT on every game state update from SSE events.
   $effect(() => {
-    if (!shouldStream) return
+    if (!shouldStream)
+      return
 
     const stream = createGameStream(
       gameId,
@@ -105,7 +107,8 @@
   })
 
   async function handleJoin() {
-    if (!game) return
+    if (!game)
+      return
     error = null
     joining = true
     try {
@@ -121,7 +124,8 @@
   }
 
   async function handleMove(column: number) {
-    if (!game || pendingColumn !== null) return
+    if (!game || pendingColumn !== null)
+      return
 
     // Compute optimistic board
     const newBoard = game.board.map(row => [...row])
@@ -132,7 +136,8 @@
         break
       }
     }
-    if (targetRow === -1) return
+    if (targetRow === -1)
+      return
 
     newBoard[targetRow][column] = myPlayerNumber
     optimisticBoard = newBoard
@@ -142,7 +147,7 @@
 
     try {
       await playMove(gameId, column)
-      // No re-fetch — SSE event will update game state and clear optimistic board
+    // No re-fetch — SSE event will update game state and clear optimistic board
     }
     catch (e) {
       optimisticBoard = null
@@ -156,7 +161,17 @@
 </script>
 
 {#if loading}
-  <p>Loading game...</p>
+  <div class='game-layout'>
+    <Skeleton width='500px' height='440px' borderRadius='8px' />
+    <div class='skeleton-panel'>
+      <Skeleton width='100px' height='1.5rem' borderRadius='9999px' />
+      <div class='skeleton-players'>
+        <Skeleton width='140px' height='1rem' />
+        <Skeleton width='140px' height='1rem' />
+      </div>
+      <Skeleton width='100%' height='160px' />
+    </div>
+  </div>
 {:else if !game}
   <div class='not-found'>
     <p class='error'>{error ?? 'Game not found'}</p>
@@ -251,5 +266,18 @@
     font-size: 0.875rem;
     cursor: pointer;
     color: #213547;
+  }
+
+  .skeleton-panel {
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .skeleton-players {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 </style>

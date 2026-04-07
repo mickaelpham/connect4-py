@@ -15,12 +15,12 @@
   let hoverColumn: number | null = $state(null)
 
   const ROWS = 6
-  const COLS = 7
   const CELL_SIZE = 64
   const GAP = 4
 
   const winSet = $derived(() => {
-    if (!winningCells) return null
+    if (!winningCells)
+      return null
     const s = new Set<string>()
     for (const [r, c] of winningCells) s.add(`${r},${c}`)
     return s
@@ -28,7 +28,8 @@
 
   function landingRow(col: number): number {
     for (let r = ROWS - 1; r >= 0; r--) {
-      if (board[r][col] === 0) return r
+      if (board[r][col] === 0)
+        return r
     }
     return -1
   }
@@ -38,8 +39,10 @@
   }
 
   function pieceColor(value: number): string {
-    if (value === 1) return '#EF4444'
-    if (value === 2) return '#FACC15'
+    if (value === 1)
+      return '#EF4444'
+    if (value === 2)
+      return '#FACC15'
     return 'transparent'
   }
 

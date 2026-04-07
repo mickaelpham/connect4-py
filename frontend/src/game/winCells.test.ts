@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { findWinCells } from './winCells'
 
 function emptyBoard(): number[][] {
-  return Array.from({ length: 6 }, () => Array.from({ length: 7 }, () => 0))
+  return Array.from({ length: 6 }, () => Array.from({ length: 7 }).fill(0))
 }
 
 describe('findWinCells', () => {

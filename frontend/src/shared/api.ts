@@ -1,5 +1,6 @@
 import { clearAuth, getAuth, setAuth } from '../auth/auth.svelte'
 import { navigate } from '../router.svelte'
+import { addToast } from './toast.svelte'
 
 export class ApiError extends Error {
   constructor(public status: number, public detail: string) {
@@ -75,7 +76,9 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({})) as { detail?: string }
-    throw new ApiError(res.status, body.detail ?? 'Request failed')
+    const detail = body.detail ?? 'Request failed'
+    addToast(detail)
+    throw new ApiError(res.status, detail)
   }
   return res.json() as Promise<T>
 }

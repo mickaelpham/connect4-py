@@ -11,7 +11,9 @@
   async function handleCopy() {
     await navigator.clipboard.writeText(gameUrl)
     copied = true
-    setTimeout(() => { copied = false }, 2000)
+    setTimeout(() => {
+      copied = false
+    }, 2000)
   }
 </script>
 

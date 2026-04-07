@@ -1,8 +1,8 @@
 <script lang='ts'>
-  import type { GameDetailResponse } from '../shared/api'
   import type { DisplayStatus } from '../lobby/gameStatus'
-  import { navigate } from '../router.svelte'
+  import type { GameDetailResponse } from '../shared/api'
   import { statusLabel } from '../lobby/gameStatus'
+  import { navigate } from '../router.svelte'
 
   interface Props {
     game: GameDetailResponse

@@ -23,8 +23,8 @@ describe('parseRoute()', () => {
     expect(parseRoute('/games/abc123')).toEqual({ page: 'game', params: { id: 'abc123' } })
   })
 
-  it('treats unknown paths as lobby', () => {
-    expect(parseRoute('/unknown')).toEqual({ page: 'lobby', params: {} })
+  it('treats unknown paths as not-found', () => {
+    expect(parseRoute('/unknown')).toEqual({ page: 'not-found', params: {} })
   })
 })
 

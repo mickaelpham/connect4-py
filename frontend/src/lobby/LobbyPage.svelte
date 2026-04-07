@@ -4,6 +4,7 @@
   import { getAuth } from '../auth/auth.svelte'
   import { navigate } from '../router.svelte'
   import { ApiError, createGame, getGames, getOpenGames, joinGame } from '../shared/api'
+  import Skeleton from '../shared/Skeleton.svelte'
   import { getDisplayStatus, statusLabel } from './gameStatus'
 
   const auth = getAuth()
@@ -14,6 +15,7 @@
   let error: string | null = $state(null)
   let creatingGame = $state(false)
   let joiningGameId: string | null = $state(null)
+  const actionInFlight = $derived(creatingGame || joiningGameId !== null)
 
   async function loadGames() {
     try {
@@ -95,14 +97,37 @@
   {/if}
 
   {#if loading}
-    <p>Loading games...</p>
+    <section>
+      <h3>Your Games</h3>
+      <ul class='game-list skeleton-list' role='list'>
+        {#each Array.from({ length: 3 }) as _}
+          <li class='skeleton-row'>
+            <Skeleton width='120px' height='1rem' />
+            <Skeleton width='72px' height='1.25rem' borderRadius='9999px' />
+            <Skeleton width='48px' height='0.875rem' />
+          </li>
+        {/each}
+      </ul>
+    </section>
+    <section>
+      <h3>Open Games</h3>
+      <ul class='game-list skeleton-list' role='list'>
+        {#each Array.from({ length: 2 }) as _}
+          <li class='skeleton-row'>
+            <Skeleton width='120px' height='1rem' />
+            <Skeleton width='48px' height='0.875rem' />
+            <Skeleton width='56px' height='1.75rem' borderRadius='4px' />
+          </li>
+        {/each}
+      </ul>
+    </section>
   {:else}
     <section>
       <h3>Your Games</h3>
       {#if myGames.length === 0}
         <p class='empty'>No games yet. Create one or join an open game!</p>
       {:else}
-        <ul class='game-list' role='list'>
+        <ul class='game-list' class:disabled={actionInFlight} role='list'>
           {#each myGames as game (game.id)}
             <li>
               <a
@@ -127,7 +152,7 @@
       {#if openGames.length === 0}
         <p class='empty'>No open games right now.</p>
       {:else}
-        <ul class='game-list' role='list'>
+        <ul class='game-list' class:disabled={actionInFlight} role='list'>
           {#each openGames as game (game.id)}
             <li class='open-game-item'>
               <span class='creator'>{game.player1.username}</span>
@@ -288,5 +313,23 @@
     font-size: 0.8rem;
     color: #9ca3af;
     white-space: nowrap;
+  }
+
+  .game-list.disabled {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  .skeleton-list {
+    pointer-events: none;
+  }
+
+  .skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
   }
 </style>

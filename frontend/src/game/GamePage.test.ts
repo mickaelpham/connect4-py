@@ -62,7 +62,7 @@ describe('gamePage', () => {
       }),
     )
     render(GamePage, { props: { gameId: 'game1' } })
-    expect(screen.getByText('Loading game...')).toBeInTheDocument()
+    expect(document.querySelectorAll('.skeleton').length).toBeGreaterThan(0)
   })
 
   it('shows error when game not found', async () => {

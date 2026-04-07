@@ -64,10 +64,11 @@ describe('lobbyPage', () => {
     expect(screen.getByRole('button', { name: 'New Game' })).toBeInTheDocument()
   })
 
-  it('shows loading state initially', () => {
+  it('shows skeleton loading state initially', () => {
     mockGamesApi()
     render(LobbyPage)
-    expect(screen.getByText('Loading games...')).toBeInTheDocument()
+    expect(screen.getByText('Your Games')).toBeInTheDocument()
+    expect(document.querySelectorAll('.skeleton').length).toBeGreaterThan(0)
   })
 
   it('displays your games section', async () => {

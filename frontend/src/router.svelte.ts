@@ -1,13 +1,13 @@
 import { isAuthenticated } from './auth/auth.svelte'
 
 export interface Route {
-  page: 'login' | 'register' | 'lobby' | 'game'
+  page: 'login' | 'register' | 'lobby' | 'game' | 'not-found'
   params: Record<string, string>
 }
 
 const GAMES_RE = /^\/games\/([^/]+)$/
 
-const PUBLIC_PAGES = new Set<Route['page']>(['login', 'register'])
+const PUBLIC_PAGES = new Set<Route['page']>(['login', 'register', 'not-found'])
 
 export function parseRoute(path: string): Route {
   if (path === '/login')
@@ -17,6 +17,8 @@ export function parseRoute(path: string): Route {
   const match = GAMES_RE.exec(path)
   if (match)
     return { page: 'game', params: { id: match[1] } }
+  if (path !== '/')
+    return { page: 'not-found', params: {} }
   return { page: 'lobby', params: {} }
 }
 
