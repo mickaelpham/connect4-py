@@ -6,6 +6,7 @@
   import { getDisplayStatus } from '../lobby/gameStatus'
   import { navigate } from '../router.svelte'
   import { ApiError, getGame, joinGame, playMove } from '../shared/api'
+  import { createGameStream } from '../shared/gameStream'
   import Board from './Board.svelte'
   import InfoPanel from './InfoPanel.svelte'
   import WaitingView from './WaitingView.svelte'
@@ -58,29 +59,30 @@
     }
   }
 
-  // Polling: refetch every 2s only while waiting for the opponent
+  // SSE: stream game events while game is active
   $effect(() => {
     if (!game) return
-    if (!isCreatorWaiting && status !== 'their-turn') return
+    const shouldStream = isCreatorWaiting || game.status === 'in_progress'
+    if (!shouldStream) return
 
-    const interval = setInterval(async () => {
-      try {
-        const updated = await getGame(gameId)
-        if (pendingColumn !== null && updated.move_count <= game!.move_count) {
-          return // server hasn't processed our move yet
-        }
-        game = updated
+    const stream = createGameStream(
+      gameId,
+      (event) => {
+        game = event.data
         if (pendingColumn !== null) {
           pendingColumn = null
           optimisticBoard = null
+          setTimeout(() => {
+            lastMoveCell = null
+          }, 300)
         }
-      }
-      catch {
-        // silently ignore polling errors
-      }
-    }, 2000)
+      },
+      () => {
+        error = 'Connection lost. Please refresh the page.'
+      },
+    )
 
-    return () => clearInterval(interval)
+    return () => stream.close()
   })
 
   async function handleJoin() {
@@ -121,16 +123,15 @@
 
     try {
       await playMove(gameId, column)
-      const updated = await getGame(gameId)
-      game = updated
+      // No re-fetch — SSE event will update game state and clear optimistic board
     }
     catch (e) {
-      error = e instanceof ApiError ? e.detail : 'Failed to play move'
-    }
-    finally {
       optimisticBoard = null
       pendingColumn = null
-      setTimeout(() => { lastMoveCell = null }, 300)
+      error = e instanceof ApiError ? e.detail : 'Failed to play move'
+      setTimeout(() => {
+        lastMoveCell = null
+      }, 300)
     }
   }
 </script>

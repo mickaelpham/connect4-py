@@ -154,14 +154,15 @@
 
 ## Phase 11: SSE Real-Time Updates
 
-- [ ] Backend: add `pg_notify()` calls in `create_move()`, `join_game()`, and game-over logic
-- [ ] Backend: SSE endpoint `GET /games/:id/stream` — listens on `game_{id}` channel via asyncpg, yields events (`player_joined`, `move`, `game_over`)
-- [ ] Backend: full state fetch on SSE connect (so client never misses prior events)
-- [ ] Backend: tests for SSE endpoint
-- [ ] Frontend: `EventSource` connection to `/games/:id/stream` when on game page
-- [ ] Frontend: auto-reconnect with full state refetch on reconnection
-- [ ] Frontend: close SSE connection when navigating away from game page
-- [ ] Frontend tests: SSE reconnect logic, state sync on reconnection, connection cleanup on navigate-away
+- [x] Backend: `GameEventBroker` — shared asyncpg LISTEN/NOTIFY fan-out via per-client `asyncio.Queue` (`src/connect4/api/sse.py`)
+- [x] Backend: `pg_notify('game_events', ...)` inside transactions for `play_move_endpoint` (move/game_over) and `join_game_endpoint` (player_joined)
+- [x] Backend: SSE endpoint `GET /games/:id/stream?token=...` — token auth via query param, full state on connect, streams events, 30s keepalive
+- [x] Backend: tests for SSE — 10 tests (auth errors, broker unit tests, notification integration)
+- [x] Frontend: `createGameStream()` utility — `EventSource` with auto-reconnect (exponential backoff) + token refresh (`src/shared/gameStream.ts`)
+- [x] Frontend: replaced polling with SSE `$effect` in `GamePage.svelte`, optimistic moves confirmed by SSE (no re-fetch)
+- [x] Frontend: close SSE connection when navigating away from game page (effect cleanup)
+- [x] Frontend tests: 11 SSE tests (connect, events, reconnect, cleanup, error) + `MockEventSource` test utility
+- [ ] Investigate: `GET /games/:id/stream` appears to fire continuously — debug SSE connection/reconnect loop
 
 ## Phase 11.5: Game Page Enhancements
 

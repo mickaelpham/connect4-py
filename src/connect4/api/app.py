@@ -7,13 +7,19 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from connect4.api.rate_limit import limiter
+from connect4.api.sse import GameEventBroker
+from connect4.config import get_settings
 from connect4.db.connection import close_pool, create_pool
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.db_pool = await create_pool()
+    broker = GameEventBroker()
+    await broker.start(str(get_settings().database_url))
+    app.state.event_broker = broker
     yield
+    await broker.stop()
     await close_pool(app.state.db_pool)
 
 

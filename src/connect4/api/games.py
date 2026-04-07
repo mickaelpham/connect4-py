@@ -1,5 +1,9 @@
+import asyncio
+import json
+
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from starlette.responses import StreamingResponse
 
 from connect4.api.dependencies import get_current_player, get_db_conn
 from connect4.api.rate_limit import limiter
@@ -11,6 +15,8 @@ from connect4.api.schemas import (
     PlayerInfo,
     PlayMoveRequest,
 )
+from connect4.api.sse import GameEventBroker
+from connect4.api.tokens import decode_access_token
 from connect4.core.board import COLUMNS, ROWS
 from connect4.core.exceptions import ColumnFullError, GameOverError, InvalidMoveError
 from connect4.core.game import Game
@@ -101,6 +107,21 @@ def _current_player_number(
     return int(game_engine.current_player)
 
 
+async def _notify_game_event(
+    conn: asyncpg.Connection,
+    game_id: str,
+    event_type: str,
+) -> None:
+    """Build full GameDetailResponse and pg_notify inside the current transaction."""
+    detail = await _build_game_detail(conn, game_id)
+    payload = json.dumps({
+        "game_id": game_id,
+        "event": event_type,
+        "data": detail.model_dump(),
+    })
+    await conn.execute("SELECT pg_notify('game_events', $1)", payload)
+
+
 @router.post("", response_model=GameResponse, status_code=201)
 @limiter.limit("10/minute")
 async def create_game_endpoint(
@@ -130,7 +151,9 @@ async def join_game_endpoint(
         )
     if game["player1_id"] == player["id"]:
         raise HTTPException(status.HTTP_409_CONFLICT, "Cannot join your own game")
-    updated = await join_game(conn, game_id, player["id"])
+    async with conn.transaction():
+        updated = await join_game(conn, game_id, player["id"])
+        await _notify_game_event(conn, game_id, "player_joined")
     p1 = await get_player_by_id(conn, game["player1_id"])
     return _game_response(updated, _player_info(p1), _player_info(player), None)
 
@@ -182,6 +205,12 @@ async def play_move_endpoint(
             elif game_engine.winner == Player.TWO:
                 winner_id = game["player2_id"]
             await update_game_status(conn, game_id, game_engine.status.value, winner_id)
+
+        if game_engine.status.value != "in_progress":
+            event_type = "game_over"
+        else:
+            event_type = "move"
+        await _notify_game_event(conn, game_id, event_type)
 
     return MoveResponse(
         id=move["id"],
@@ -308,4 +337,81 @@ async def list_games_endpoint(
     return PaginatedGamesResponse(
         games=results,
         next_cursor=games[-1]["id"] if has_next else None,
+    )
+
+
+async def _build_game_detail(
+    conn: asyncpg.Connection,
+    game_id: str,
+) -> GameDetailResponse:
+    game = await get_game_by_id(conn, game_id)
+    p1, p2, winner = await _resolve_players(conn, game)
+    moves = await get_game_moves(conn, game_id)
+    game_engine = _replay_game(moves)
+    return GameDetailResponse(
+        id=game["id"],
+        player1=p1,
+        player2=p2,
+        status=game["status"],
+        winner=winner,
+        created_at=game["created_at"].isoformat(),
+        updated_at=game["updated_at"].isoformat(),
+        move_count=len(moves),
+        board=_board_to_row_major(game_engine),
+        current_player=_current_player_number(game, game_engine),
+    )
+
+
+def _format_sse(event: str, data: str) -> str:
+    return f"event: {event}\ndata: {data}\n\n"
+
+
+@router.get("/{game_id}/stream")
+async def game_stream_endpoint(
+    game_id: str,
+    request: Request,
+    token: str = Query(...),
+    conn: asyncpg.Connection = Depends(get_db_conn),
+) -> StreamingResponse:
+    try:
+        payload = decode_access_token(token)
+    except Exception:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED, "Invalid or expired token"
+        )
+    player = await get_player_by_id(conn, payload["sub"])
+    if player is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Player not found")
+
+    game = await get_game_by_id(conn, game_id)
+    if game is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Game not found")
+
+    initial = await _build_game_detail(conn, game_id)
+    broker: GameEventBroker = request.app.state.event_broker
+
+    async def event_generator():
+        yield _format_sse("game_state", initial.model_dump_json())
+
+        async with broker.subscribe(game_id) as queue:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    raw = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    msg = json.loads(raw)
+                    yield _format_sse(msg["event"], json.dumps(msg["data"]))
+                    if msg["event"] == "game_over":
+                        break
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )

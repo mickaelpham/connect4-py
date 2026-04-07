@@ -2,13 +2,14 @@ import { render, screen, waitFor } from '@testing-library/svelte'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MockEventSource } from '../../test/mockEventSource'
 import { server } from '../../test/server'
 import { clearAuth, setAuth } from '../auth/auth.svelte'
 import * as router from '../router.svelte'
 import GamePage from './GamePage.svelte'
 
 function emptyBoard(): number[][] {
-  return Array.from({ length: 6 }, () => Array.from({ length: 7 }, () => 0))
+  return Array.from({ length: 6 }, () => Array.from<number>({ length: 7 }).fill(0))
 }
 
 const baseGame = {
@@ -43,9 +44,11 @@ beforeEach(() => {
   clearAuth()
   setAuth('test-token', 'alice')
   vi.useFakeTimers({ shouldAdvanceTime: true })
+  MockEventSource.install()
 })
 
 afterEach(() => {
+  MockEventSource.uninstall()
   vi.useRealTimers()
 })
 
@@ -53,7 +56,7 @@ describe('gamePage', () => {
   it('shows loading state initially', () => {
     // Never resolve the API call
     server.use(
-      http.get('/api/games/:gameId', () => {
+      http.get('/api/games/:gameId', async () => {
         return new Promise(() => {})
       }),
     )
@@ -114,8 +117,6 @@ describe('gamePage', () => {
         const body = await request.json() as { column: number }
         moveRequested = true
         expect(body.column).toBe(0)
-        const updatedBoard = emptyBoard()
-        updatedBoard[5][0] = 1
         return HttpResponse.json({
           id: 'move1',
           player: { id: 'p1', username: 'alice' },
@@ -124,18 +125,8 @@ describe('gamePage', () => {
           created_at: new Date().toISOString(),
         })
       }),
-      // After move, getGame returns updated state
-      http.get('/api/games/:gameId', ({ request }) => {
-        const updatedBoard = emptyBoard()
-        if (moveRequested) {
-          updatedBoard[5][0] = 1
-        }
-        return HttpResponse.json({
-          ...baseGame,
-          board: updatedBoard,
-          move_count: moveRequested ? 1 : 0,
-          current_player: moveRequested ? 2 : 1,
-        })
+      http.get('/api/games/:gameId', () => {
+        return HttpResponse.json(baseGame)
       }),
     )
 
@@ -151,7 +142,7 @@ describe('gamePage', () => {
     expect(moveRequested).toBe(true)
   })
 
-  it('shows error on failed move', async () => {
+  it('shows error on failed move and rolls back optimistic board', async () => {
     mockGameApi(baseGame)
     server.use(
       http.post('/api/games/:gameId/moves', () => {
@@ -194,82 +185,11 @@ describe('gamePage', () => {
     await screen.findByRole('grid', { name: 'Connect 4 board' })
 
     // Check that win cells have the 'win' class and others have 'dimmed'
-    const pieces = document.querySelectorAll('.piece')
     const winPieces = document.querySelectorAll('.piece.win')
     const dimmedPieces = document.querySelectorAll('.piece.dimmed')
 
     expect(winPieces.length).toBe(4)
     expect(dimmedPieces.length).toBe(3) // the 3 player-2 pieces
-  })
-
-  it('polls for updates every 2s', async () => {
-    let fetchCount = 0
-    server.use(
-      http.get('/api/games/:gameId', () => {
-        fetchCount++
-        // After second fetch, opponent has played
-        if (fetchCount >= 3) {
-          const updatedBoard = emptyBoard()
-          updatedBoard[5][0] = 1
-          updatedBoard[5][1] = 2
-          return HttpResponse.json({
-            ...baseGame,
-            board: updatedBoard,
-            move_count: 2,
-            current_player: 1,
-          })
-        }
-        const board = emptyBoard()
-        board[5][0] = 1
-        return HttpResponse.json({
-          ...baseGame,
-          board,
-          move_count: 1,
-          current_player: 2,
-        })
-      }),
-    )
-
-    render(GamePage, { props: { gameId: 'game1' } })
-    await screen.findByRole('grid', { name: 'Connect 4 board' })
-
-    // Initial fetch = 1
-    expect(fetchCount).toBe(1)
-
-    // Advance 2s → poll fires
-    await vi.advanceTimersByTimeAsync(2000)
-    await waitFor(() => expect(fetchCount).toBe(2))
-
-    // Advance another 2s → another poll
-    await vi.advanceTimersByTimeAsync(2000)
-    await waitFor(() => expect(fetchCount).toBe(3))
-  })
-
-  it('stops polling when game ends', async () => {
-    let fetchCount = 0
-    server.use(
-      http.get('/api/games/:gameId', () => {
-        fetchCount++
-        return HttpResponse.json({
-          ...baseGame,
-          status: 'won',
-          winner: { id: 'p1', username: 'alice' },
-          current_player: null,
-          move_count: 7,
-        })
-      }),
-    )
-
-    render(GamePage, { props: { gameId: 'game1' } })
-    await screen.findByText('You won')
-
-    const countAfterLoad = fetchCount
-
-    // Advance several polling intervals
-    await vi.advanceTimersByTimeAsync(6000)
-
-    // No additional fetches should have happened
-    expect(fetchCount).toBe(countAfterLoad)
   })
 
   it('navigates back to lobby from not-found', async () => {
@@ -351,24 +271,214 @@ describe('gamePage', () => {
 
     expect(await screen.findByRole('grid', { name: 'Connect 4 board' })).toBeInTheDocument()
   })
+})
 
-  it('does not poll when viewing someone else\'s waiting game', async () => {
-    let fetchCount = 0
+describe('gamePage SSE', () => {
+  it('connects SSE when game is in progress', async () => {
+    mockGameApi(baseGame)
+    render(GamePage, { props: { gameId: 'game1' } })
+    await screen.findByRole('grid', { name: 'Connect 4 board' })
+
+    const es = MockEventSource.latest()
+    expect(es).toBeDefined()
+    expect(es!.url).toContain('/api/games/game1/stream')
+    expect(es!.url).toContain('token=test-token')
+  })
+
+  it('connects SSE when creator is waiting', async () => {
+    mockGameApi(waitingGame)
+    render(GamePage, { props: { gameId: 'game1' } })
+    await screen.findByText('Waiting for opponent')
+
+    const es = MockEventSource.latest()
+    expect(es).toBeDefined()
+    expect(es!.url).toContain('/api/games/game1/stream')
+  })
+
+  it('does not connect SSE for finished games', async () => {
+    mockGameApi({
+      ...baseGame,
+      status: 'won',
+      winner: { id: 'p1', username: 'alice' },
+      current_player: null,
+      move_count: 7,
+    })
+    render(GamePage, { props: { gameId: 'game1' } })
+    await screen.findByText('You won')
+
+    expect(MockEventSource.instances.length).toBe(0)
+  })
+
+  it('does not connect SSE when viewing someone else\'s waiting game', async () => {
+    mockGameApi({
+      ...waitingGame,
+      player1: { id: 'p3', username: 'charlie' },
+    })
+    render(GamePage, { props: { gameId: 'game1' } })
+    await screen.findByText('charlie is waiting for an opponent')
+
+    expect(MockEventSource.instances.length).toBe(0)
+  })
+
+  it('updates game state from SSE move event', async () => {
+    mockGameApi(baseGame)
+    render(GamePage, { props: { gameId: 'game1' } })
+    await screen.findByRole('grid', { name: 'Connect 4 board' })
+
+    // Simulate SSE move event — opponent played in column 0
+    const updatedBoard = emptyBoard()
+    updatedBoard[5][0] = 1
+    updatedBoard[5][1] = 2
+
+    const es = MockEventSource.latest()!
+    es._emit('move', {
+      ...baseGame,
+      board: updatedBoard,
+      move_count: 2,
+      current_player: 1,
+    })
+
+    // Board should update — check that pieces are rendered
+    await waitFor(() => {
+      const pieces = document.querySelectorAll('.piece')
+      expect(pieces.length).toBeGreaterThanOrEqual(2)
+    })
+  })
+
+  it('transitions from waiting to board on player_joined event', async () => {
+    mockGameApi(waitingGame)
+    render(GamePage, { props: { gameId: 'game1' } })
+    await screen.findByText('Waiting for opponent')
+
+    const es = MockEventSource.latest()!
+    es._emit('player_joined', {
+      ...baseGame,
+      status: 'in_progress',
+      player2: { id: 'p2', username: 'bob' },
+    })
+
+    expect(await screen.findByRole('grid', { name: 'Connect 4 board' })).toBeInTheDocument()
+  })
+
+  it('shows winner on game_over event', async () => {
+    mockGameApi(baseGame)
+    render(GamePage, { props: { gameId: 'game1' } })
+    await screen.findByRole('grid', { name: 'Connect 4 board' })
+
+    const wonBoard = emptyBoard()
+    wonBoard[5][0] = 1
+    wonBoard[5][1] = 1
+    wonBoard[5][2] = 1
+    wonBoard[5][3] = 1
+
+    const es = MockEventSource.latest()!
+    es._emit('game_over', {
+      ...baseGame,
+      status: 'won',
+      winner: { id: 'p1', username: 'alice' },
+      board: wonBoard,
+      current_player: null,
+      move_count: 7,
+    })
+
+    expect(await screen.findByText('You won')).toBeInTheDocument()
+  })
+
+  it('clears optimistic state when SSE confirms move', async () => {
+    mockGameApi(baseGame)
     server.use(
-      http.get('/api/games/:gameId', () => {
-        fetchCount++
+      http.post('/api/games/:gameId/moves', () => {
         return HttpResponse.json({
-          ...waitingGame,
-          player1: { id: 'p3', username: 'charlie' },
+          id: 'move1',
+          player: { id: 'p1', username: 'alice' },
+          column: 0,
+          move_number: 1,
+          created_at: new Date().toISOString(),
         })
       }),
     )
 
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(GamePage, { props: { gameId: 'game1' } })
-    await screen.findByText('charlie is waiting for an opponent')
-    const countAfterLoad = fetchCount
+    await screen.findByRole('grid', { name: 'Connect 4 board' })
 
-    await vi.advanceTimersByTimeAsync(6000)
-    expect(fetchCount).toBe(countAfterLoad)
+    // Play optimistic move
+    const cells = screen.getAllByRole('gridcell')
+    await user.click(cells[0])
+
+    // SSE confirms with server state
+    const confirmedBoard = emptyBoard()
+    confirmedBoard[5][0] = 1
+
+    const es = MockEventSource.latest()!
+    es._emit('move', {
+      ...baseGame,
+      board: confirmedBoard,
+      move_count: 1,
+      current_player: 2,
+    })
+
+    // Status should show their turn now
+    expect(await screen.findByText('Their turn')).toBeInTheDocument()
+  })
+
+  it('closes SSE on component unmount', async () => {
+    mockGameApi(baseGame)
+    const { unmount } = render(GamePage, { props: { gameId: 'game1' } })
+    await screen.findByRole('grid', { name: 'Connect 4 board' })
+
+    const es = MockEventSource.latest()!
+    expect(es.readyState).not.toBe(2)
+
+    unmount()
+
+    // EventSource should be closed
+    expect(es.readyState).toBe(2)
+  })
+
+  it('shows error on permanent SSE connection failure', async () => {
+    mockGameApi(baseGame)
+    render(GamePage, { props: { gameId: 'game1' } })
+    await screen.findByRole('grid', { name: 'Connect 4 board' })
+
+    // Mock tryRefresh to fail
+    server.use(
+      http.post('/api/refresh', () => {
+        return HttpResponse.json({ detail: 'Invalid' }, { status: 401 })
+      }),
+    )
+
+    // Simulate multiple SSE errors to exhaust reconnect attempts
+    for (let i = 0; i < 6; i++) {
+      const es = MockEventSource.latest()!
+      es._emitError()
+      // Advance past reconnect delay
+      await vi.advanceTimersByTimeAsync(60_000)
+    }
+
+    expect(await screen.findByText('Connection lost. Please refresh the page.')).toBeInTheDocument()
+  })
+
+  it('reconnects SSE on error', async () => {
+    mockGameApi(baseGame)
+    render(GamePage, { props: { gameId: 'game1' } })
+    await screen.findByRole('grid', { name: 'Connect 4 board' })
+
+    server.use(
+      http.post('/api/refresh', () => {
+        return HttpResponse.json({ detail: 'Invalid' }, { status: 401 })
+      }),
+    )
+
+    const initialCount = MockEventSource.instances.length
+
+    // Simulate SSE error
+    MockEventSource.latest()!._emitError()
+
+    // Advance past first reconnect delay (1s)
+    await vi.advanceTimersByTimeAsync(1500)
+
+    // A new EventSource should have been created
+    expect(MockEventSource.instances.length).toBeGreaterThan(initialCount)
   })
 })
