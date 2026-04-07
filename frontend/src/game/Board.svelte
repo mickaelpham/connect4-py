@@ -40,7 +40,7 @@
   function pieceColor(value: number): string {
     if (value === 1) return '#EF4444'
     if (value === 2) return '#FACC15'
-    return '#1a2a3a'
+    return 'transparent'
   }
 
   function handleColumnClick(col: number) {
@@ -93,16 +93,36 @@
     grid-template-rows: repeat(6, 64px);
     gap: 4px;
     padding: 8px;
-    background: #213547;
+    background: #1a2a3a;
     border-radius: 8px;
     overflow: hidden;
+    position: relative;
+  }
+
+  /* Board face plate: covers the grid with circular holes so dropping
+     pieces (z-index 1) fall behind it, while placed pieces (z-index 3)
+     sit in front. Hole size matches piece diameter (56px = 28px radius),
+     tiled at cell+gap period (68px), offset by board padding (8px). */
+  .board::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #213547;
+    border-radius: 8px;
+    z-index: 2;
+    pointer-events: none;
+    mask-image: radial-gradient(circle 28px at center, transparent 100%, black 0);
+    mask-size: 68px 68px;
+    mask-position: 8px 8px;
+    -webkit-mask-image: radial-gradient(circle 28px at center, transparent 100%, black 0);
+    -webkit-mask-size: 68px 68px;
+    -webkit-mask-position: 8px 8px;
   }
 
   .cell {
     padding: 0;
     border: none;
-    background: #1a2a3a;
-    border-radius: 50%;
+    background: transparent;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -118,11 +138,12 @@
     height: 56px;
     border-radius: 50%;
     transition: opacity 0.3s;
+    position: relative;
+    z-index: 3;
   }
 
   .piece.win {
     box-shadow: 0 0 0 3px white;
-    z-index: 1;
   }
 
   .piece.dimmed {
@@ -131,6 +152,7 @@
 
   .piece.dropping {
     animation: drop 0.3s ease-in;
+    z-index: 1;
   }
 
   @keyframes drop {
