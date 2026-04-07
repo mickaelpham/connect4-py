@@ -95,12 +95,14 @@
     padding: 8px;
     background: #213547;
     border-radius: 8px;
+    overflow: hidden;
   }
 
   .cell {
     padding: 0;
     border: none;
-    background: transparent;
+    background: #1a2a3a;
+    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
