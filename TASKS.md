@@ -171,10 +171,12 @@
 
 ## Phase 12: Error Handling & Polish
 
-- [ ] Toast/notification system for API errors (invalid move, game full, etc.)
-- [ ] Loading states (skeleton/spinner) for async fetches
-- [ ] 404 page for unknown routes
-- [ ] Disable inputs while requests are in flight
+- [x] Toast/notification system for API errors — `toast.svelte.ts` store + `Toast.svelte` component, mounted in `App.svelte`, integrated into `apiFetch`; errors persist until dismissed, warnings auto-dismiss after 5s, deduplicates identical messages
+- [x] Skeleton loading states — `Skeleton.svelte` component with shimmer animation; lobby shows skeleton game rows, game page shows skeleton board + info panel
+- [x] 404 page — `NotFoundPage.svelte`; router returns `not-found` for unrecognized paths instead of falling through to lobby
+- [x] Disable inputs while requests are in flight — lobby list links greyed out during create/join (other inputs already handled)
+- [x] Fix pre-existing lint issues in Board, InfoPanel, WaitingView, winCells.test
+- [x] Tests: 106 frontend tests pass (3 updated for skeleton/404 changes)
 
 ## Phase 13: E2E Tests
 
