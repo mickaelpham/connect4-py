@@ -1,0 +1,15 @@
+{
+  "name": "connect4-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@types/pg": "^8.15.4",
+    "dotenv": "^16.5.0",
+    "pg": "^8.16.0"
+  }
+}

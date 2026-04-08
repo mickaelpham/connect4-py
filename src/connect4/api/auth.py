@@ -1,3 +1,5 @@
+import os
+
 import asyncpg as _asyncpg
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 
@@ -23,6 +25,7 @@ from connect4.db.refresh_tokens import (
 router = APIRouter(tags=["auth"])
 
 REFRESH_COOKIE_NAME = "refresh_token"
+_COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "1") != "0"
 
 
 def _set_refresh_cookie(response: Response, raw_refresh: str) -> None:
@@ -30,7 +33,7 @@ def _set_refresh_cookie(response: Response, raw_refresh: str) -> None:
         key=REFRESH_COOKIE_NAME,
         value=raw_refresh,
         httponly=True,
-        secure=True,
+        secure=_COOKIE_SECURE,
         samesite="strict",
         path="/api/refresh",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 86400,
@@ -41,7 +44,7 @@ def _clear_refresh_cookie(response: Response) -> None:
     response.delete_cookie(
         key=REFRESH_COOKIE_NAME,
         httponly=True,
-        secure=True,
+        secure=_COOKIE_SECURE,
         samesite="strict",
         path="/api/refresh",
     )

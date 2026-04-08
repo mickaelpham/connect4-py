@@ -180,9 +180,13 @@
 
 ## Phase 13: E2E Tests
 
-- [ ] Set up Playwright (install, `playwright.config.ts`, npm scripts + Makefile targets)
-- [ ] Helper: start backend + frontend dev servers for test runs
-- [ ] E2E: register → login → create game flow
-- [ ] E2E: two-player game to completion (win + draw)
-- [ ] E2E: lobby list updates after game creation / join
-- [ ] E2E: error states (wrong turn, full column, game over)
+- [x] Set up Playwright in top-level `e2e/` directory (`playwright.config.ts`, `package.json`, npm scripts + Makefile targets `e2e`, `e2e-ui`)
+- [x] Playwright `webServer` config starts both backend (uvicorn :8000) and frontend (vite :5173) automatically
+- [x] Global setup: creates `connect4_test` database, runs alembic migrations, truncates tables
+- [x] Custom fixtures: `player1`/`player2` with separate browser contexts, `dbCleanup` auto-truncation between tests
+- [x] Backend: `DISABLE_RATE_LIMIT` env var to disable slowapi for E2E, `COOKIE_SECURE` env var for HTTP localhost
+- [x] E2E: auth tests (7) — register, login, logout, auth guard redirect, validation errors, duplicate username, wrong password
+- [x] E2E: lobby tests (4) — empty lobby, create game, open games visible, join game
+- [x] E2E: two-player game tests (5) — SSE player joined, SSE move propagation, vertical win, turn enforcement, horizontal win with highlights
+- [x] E2E: error state tests (3) — full column disabled, board disabled after game over, game not found
+- [x] 19 E2E tests total, all passing (~10s)
