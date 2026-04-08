@@ -1,5 +1,5 @@
 <script lang='ts'>
-  import { dismissToast, getToasts } from './toast.svelte'
+  import { dismissToast, getToasts } from './toastStore.svelte'
 
   const store = getToasts()
 </script>

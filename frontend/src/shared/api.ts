@@ -1,6 +1,6 @@
 import { clearAuth, getAuth, setAuth } from '../auth/auth.svelte'
 import { navigate } from '../router.svelte'
-import { addToast } from './toast.svelte'
+import { addToast } from './toastStore.svelte'
 
 export class ApiError extends Error {
   constructor(public status: number, public detail: string) {
