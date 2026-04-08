@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
 
     jwt_secret: str
+    cors_origins: str = "http://localhost:5173"
 
     @computed_field
     @property
