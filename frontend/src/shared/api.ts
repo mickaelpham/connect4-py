@@ -160,7 +160,7 @@ export async function getGame(gameId: string): Promise<GameDetailResponse> {
 }
 
 export async function getGames(cursor?: string): Promise<PaginatedGamesResponse> {
-  const params = cursor !== undefined ? `?cursor=${cursor}` : ''
+  const params = cursor !== undefined ? `?cursor=${encodeURIComponent(cursor)}` : ''
   return apiFetch<PaginatedGamesResponse>(`/api/games${params}`, {})
 }
 

@@ -2,6 +2,7 @@ import asyncio
 import json
 
 import asyncpg
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from starlette.responses import StreamingResponse
 
@@ -396,7 +397,7 @@ async def game_stream_endpoint(
 ) -> StreamingResponse:
     try:
         payload = decode_access_token(token)
-    except Exception:
+    except jwt.InvalidTokenError:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "Invalid or expired token"
         )

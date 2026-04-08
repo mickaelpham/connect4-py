@@ -1,8 +1,8 @@
-# Security Audit Report — Connect 4 API
+# Security Audit Report — Connect 4
 
-**Date:** 2026-04-05 (revision 2)
-**Previous audit:** 2026-04-04
-**Scope:** Auth layer, DB schema, connection setup, game DB layer (pre-Phase 5)
+**Date:** 2026-04-08 (revision 3)
+**Previous audit:** 2026-04-05 (revision 2)
+**Scope:** Full stack — backend API, database, Svelte frontend, E2E test infrastructure
 **Threat model:** Public-facing side project, internet-exposed
 
 ---
@@ -12,9 +12,9 @@
 | Severity | Total | Fixed | Accepted | Acknowledged | Open |
 |----------|-------|-------|----------|--------------|------|
 | High     | 2     | 2     | —        | —            | 0    |
-| Medium   | 4     | 3     | 1        | —            | 0    |
-| Low      | 5     | 3     | 1        | —            | 1    |
-| Info     | 8     | 1     | —        | 5            | 2    |
+| Medium   | 5     | 3     | 2        | —            | 0    |
+| Low      | 6     | 5     | 1        | —            | 0    |
+| Info     | 12    | 2     | —        | 8            | 2    |
 
 ---
 
@@ -48,9 +48,9 @@ The `/refresh` endpoint now wraps the read-revoke-issue sequence in `async with 
 
 ### MED-3: No CORS middleware configured — FIXED
 
-**Location:** `src/connect4/api/app.py:21-26`
+**Location:** `src/connect4/api/app.py:27-33`
 
-`CORSMiddleware` added with `allow_origins=["http://localhost:5173"]`, scoped `allow_methods` and `allow_headers`.
+`CORSMiddleware` added with `allow_origins=["http://localhost:5173"]`, scoped `allow_methods=["GET", "POST"]` and `allow_headers=["Authorization", "Content-Type"]`.
 
 **Note:** The origin is currently hardcoded. Making it configurable via environment variable before deployment is tracked in `TASKS.md`.
 
@@ -80,11 +80,53 @@ Replaced with explicit `if player is None: raise HTTPException(500, ...)`.
 
 ---
 
+### LOW-4: slowapi asyncio monkeypatch — FIXED
+
+**Severity:** Low
+**Location:** `src/connect4/api/rate_limit.py`
+
+slowapi 0.1.9 uses the deprecated `asyncio.iscoroutinefunction` (removed in Python 3.16). The initial workaround monkeypatched `asyncio.iscoroutinefunction = inspect.iscoroutinefunction`, which mutates stdlib global state and could break other libraries.
+
+**Fix applied:** Replaced with a targeted `warnings.filterwarnings("ignore", ...)` to suppress the deprecation warning until slowapi releases a fix.
+
+---
+
+### LOW-5: Bare `except Exception` swallows JWT configuration errors — FIXED (rev 3)
+
+**Severity:** Low
+**Location:** `src/connect4/api/dependencies.py:29`, `src/connect4/api/games.py:399`
+
+Both `get_current_player` and `game_stream_endpoint` caught all exceptions from `decode_access_token`, masking `RuntimeError` from missing `JWT_SECRET` as a generic 401.
+
+**Fix applied:** Changed to `except jwt.InvalidTokenError`, allowing non-JWT errors (configuration issues, coding bugs) to propagate as 500s.
+
+---
+
+### LOW-6: Cursor not URL-encoded in query string — FIXED (rev 3)
+
+**Severity:** Low
+**Location:** `frontend/src/shared/api.ts:163`
+
+The pagination cursor was interpolated into the URL without `encodeURIComponent`. While the cursor is a ULID (alphanumeric, no special characters in practice), this is a robustness issue — a malformed cursor from a tampered `next_cursor` response could break the URL.
+
+**Fix applied:** Wrapped in `encodeURIComponent(cursor)`.
+
+---
+
 ### INFO-2: No iss/aud claims in JWT — FIXED
 
 **Location:** `src/connect4/api/tokens.py:25-26,35`
 
 `iss` and `aud` claims (`"connect4"`) added to token creation and validated in `decode_access_token`.
+
+---
+
+### INFO-8: No pagination on `list_player_games` — FIXED (rev 3)
+
+**Severity:** Info
+**Location:** `src/connect4/db/games.py:88-110`
+
+Cursor-based pagination with configurable `limit` (default 20) is now implemented. The `GET /api/games` endpoint returns a `next_cursor` for client-side pagination.
 
 ---
 
@@ -95,6 +137,27 @@ Replaced with explicit `if player is None: raise HTTPException(500, ...)`.
 **Location:** `src/connect4/api/auth.py:53-56`
 
 Still returns HTTP 409 with `"Username already taken"`. Usernames are public in game context, and there is no email-based account recovery. Risk is acceptable for this project's threat model.
+
+---
+
+### MED-5: SSE token passed as URL query parameter — ACCEPTED (rev 3)
+
+**Severity:** Medium
+**Location:** `frontend/src/shared/gameStream.ts:38`, `src/connect4/api/games.py:394`
+
+The SSE streaming endpoint receives the access token via `?token=` query parameter. This exposes the token in:
+- Browser history and developer tools
+- Server access logs
+- Proxy/CDN logs (if any)
+
+This is an inherent limitation of the `EventSource` API, which does not support custom headers. The `fetch()` API with `ReadableStream` could replace `EventSource` but would require reimplementing reconnection logic.
+
+**Mitigations in place:**
+- Access tokens are short-lived (15 minutes)
+- HTTPS encrypts the URL in transit (when deployed behind a reverse proxy)
+- The token is properly `encodeURIComponent`-encoded
+
+**Accepted** — the risk is proportionate to the project's threat model. If the project moves to a higher-security context, replace `EventSource` with a `fetch`-based SSE client that sends the token in the `Authorization` header.
 
 ---
 
@@ -126,48 +189,17 @@ argon2-cffi defaults (`time_cost=3`, `memory_cost=65536`, `parallelism=4`, `type
 
 ### INFO-4: No security headers or HTTPS enforcement
 
-**Location:** `src/connect4/api/app.py`
+**Location:** `src/connect4/api/app.py`, `frontend/index.html`
 
-Expected for local development. Security headers will be handled at the reverse proxy layer when deploying.
-
----
-
-## New findings (revision 2)
-
-### LOW-4: slowapi asyncio monkeypatch — FIXED
-
-**Severity:** Low
-**Location:** `src/connect4/api/rate_limit.py`
-
-slowapi 0.1.9 uses the deprecated `asyncio.iscoroutinefunction` (removed in Python 3.16). The initial workaround monkeypatched `asyncio.iscoroutinefunction = inspect.iscoroutinefunction`, which mutates stdlib global state and could break other libraries.
-
-**Fix applied:** Replaced with a targeted `warnings.filterwarnings("ignore", ...)` to suppress the deprecation warning until slowapi releases a fix.
-
----
-
-### LOW-5: Bare `except Exception` swallows JWT configuration errors
-
-**Severity:** Low
-**Location:** `src/connect4/api/dependencies.py:29`
-
-`get_current_player` catches all exceptions from `decode_access_token` and returns a generic 401. If `JWT_SECRET` is unset, the `RuntimeError` from `_get_secret()` is swallowed and reported as "Invalid or expired token" instead of surfacing as a 500.
-
-**Recommendation:** Catch `jwt.InvalidTokenError` (and subclasses) specifically, and let other exceptions propagate:
-```python
-except jwt.InvalidTokenError:
-    raise HTTPException(status_code=401, detail="Invalid or expired token")
-```
+Expected for local development. Security headers (CSP, X-Frame-Options, X-Content-Type-Options, HSTS) will be handled at the reverse proxy layer when deploying. The frontend has no CSP meta tag — this is part of the same deployment concern.
 
 ---
 
 ### INFO-5: Hardcoded DSN with credentials in source
 
-**Severity:** Info
 **Location:** `src/connect4/db/connection.py:5`
 
 `DEFAULT_DSN = "postgresql://connect4:connect4@localhost:5432/connect4"` contains a username/password. This is only used as a local dev fallback (overridden by `DATABASE_URL` in production). The credentials are for a local Docker Compose database and are not sensitive.
-
-No action needed unless this code is deployed without `DATABASE_URL` set.
 
 ---
 
@@ -176,13 +208,7 @@ No action needed unless this code is deployed without `DATABASE_URL` set.
 **Severity:** Info
 **Location:** migration `3b9771039e7f`, `moves` table
 
-`move_number` has no CHECK constraint. A Connect 4 game has at most 42 moves (7 columns x 6 rows). Adding `CHECK (move_number BETWEEN 1 AND 42)` would prevent invalid data at the DB level.
-
-**Recommendation:** Add in a future migration:
-```sql
-ALTER TABLE moves ADD CONSTRAINT chk_move_number
-  CHECK (move_number BETWEEN 1 AND 42);
-```
+`move_number` has no CHECK constraint. A Connect 4 game has at most 42 moves (7 columns x 6 rows). Adding `CHECK (move_number BETWEEN 1 AND 42)` would prevent invalid data at the DB level. Application logic enforces this via `len(moves) + 1` and the core `Game` class.
 
 ---
 
@@ -191,53 +217,40 @@ ALTER TABLE moves ADD CONSTRAINT chk_move_number
 **Severity:** Info
 **Location:** migration `3b9771039e7f`, `games` table
 
-No constraint ensures `winner_id` is null when `status != 'won'` or non-null when `status = 'won'`. The application layer could write inconsistent states (e.g., `status='draw'` with a `winner_id`).
-
-**Recommendation:** Add a CHECK constraint:
-```sql
-ALTER TABLE games ADD CONSTRAINT chk_winner_status_consistency
-  CHECK (
-    (status = 'won' AND winner_id IS NOT NULL)
-    OR (status != 'won' AND winner_id IS NULL)
-  );
-```
+No constraint ensures `winner_id` is null when `status != 'won'` or non-null when `status = 'won'`. Application logic derives `winner_id` from the core `Game` class, making inconsistency unlikely but not impossible at the DB level.
 
 ---
 
-### INFO-8: No pagination on `list_player_games`
+### INFO-9: E2E test secrets in `.env.test` (rev 3)
 
 **Severity:** Info
-**Location:** `src/connect4/db/games.py:67-78`
+**Location:** `e2e/.env.test`
 
-`list_player_games` returns all games for a player with no `LIMIT`/`OFFSET`. For a prolific player, this could return an unbounded result set.
-
-**Recommendation:** Add pagination parameters when building the `GET /games` endpoint in Phase 5.
+Contains `POSTGRES_PASSWORD` and `JWT_SECRET` for the test environment. The file is in `.gitignore` and has **never been committed** to git history. These credentials are for a local Docker Compose test database and are not sensitive.
 
 ---
 
-## Game layer — pre-implementation notes (Phase 5)
+### INFO-10: Rate limiting disabled in E2E test config (rev 3)
 
-The following are not bugs — the game API endpoints don't exist yet. These are authorization and validation concerns to address when building Phase 5 endpoints.
+**Severity:** Info
+**Location:** `e2e/playwright.config.ts`
 
-### GAME-1: Self-play prevention
+`DISABLE_RATE_LIMIT=1` is set in the Playwright test server environment. This is intentional — rate limiting would cause flaky tests. Rate limiting is independently tested via `test_rate_limit.py`.
 
-`join_game` (`src/connect4/db/games.py:21`) does not check that `player2_id != player1_id`. The API endpoint should reject a player joining their own game.
+---
 
-### GAME-2: Move authorization
+### INFO-11: Zero production dependencies in frontend (rev 3)
 
-`create_move` (`src/connect4/db/moves.py:6`) does not verify that the player is a participant in the game or that it is their turn. These checks should be enforced at the API layer using the core `Game` class.
+**Severity:** Info (positive finding)
+**Location:** `frontend/package.json`
 
-### GAME-3: Game status update authorization
-
-`update_game_status` (`src/connect4/db/games.py:48`) accepts any status and winner_id without validating that the winner is a participant. The API layer should derive status transitions from the core game logic, not from client input.
-
-### GAME-4: Move + status update atomicity
-
-When a move results in a win or draw, the move insertion and game status update must happen in a single transaction. Ensure the Phase 5 endpoint wraps both operations in `async with conn.transaction()`.
+The frontend has no runtime `dependencies` — only `devDependencies` for build tooling and testing. This eliminates supply-chain risk from transitive production dependencies.
 
 ---
 
 ## Items confirmed secure
+
+### Backend (unchanged from rev 2)
 
 - **SQL injection:** All queries use asyncpg parameterized queries (`$1`, `$2`...). No string interpolation in `src/connect4/db/`.
 - **Password hashing:** argon2id with OWASP-compliant defaults, proper verify/hash separation.
@@ -247,5 +260,21 @@ When a move results in a win or draw, the move insertion and game status update 
 - **Secrets in git:** `.env` is in `.gitignore`.
 - **Token expiry:** 15-minute access tokens, 7-day refresh tokens.
 - **Refresh token rotation:** Atomic read-revoke-issue with row-level locking.
-- **Rate limiting:** All auth endpoints rate-limited per IP.
+- **Rate limiting:** All auth and game endpoints rate-limited per IP.
 - **CORS:** Restrictive origin whitelist with scoped methods/headers.
+
+### Game layer (new in rev 3)
+
+- **Self-play prevention:** `POST /games/{id}/join` rejects `player2_id == player1_id`.
+- **Move authorization:** Core `Game` class enforces turn order, column bounds, and game-over state before accepting moves.
+- **Move + status atomicity:** Move insertion and game status update wrapped in `async with conn.transaction()`.
+- **Game status transitions:** Derived from core game logic, not from client input.
+
+### Frontend (new in rev 3)
+
+- **XSS:** No `{@html}`, `innerHTML`, or `dangerouslySetInnerHTML`. All user content auto-escaped by Svelte's default interpolation (`{variable}`).
+- **Token storage:** Access token in memory only (Svelte `$state`), not `localStorage` or `sessionStorage`. Refresh token in `httpOnly`/`Secure`/`SameSite=strict` cookie.
+- **Token refresh:** Automatic 401 retry with deduplication of concurrent refresh requests.
+- **Client-side validation:** `validation.ts` mirrors backend constraints in `schemas.py` (username length/pattern, password length).
+- **SSE reconnection:** Exponential backoff (1s–30s), max 5 attempts, token refresh before reconnect.
+- **SSE event filtering:** Only known event types (`game_state`, `player_joined`, `move`, `game_over`) are handled.

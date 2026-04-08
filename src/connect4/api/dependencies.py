@@ -4,6 +4,8 @@ import asyncpg
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+import jwt
+
 from connect4.api.tokens import decode_access_token
 from connect4.db.players import get_player_by_id
 
@@ -26,7 +28,7 @@ async def get_current_player(
         )
     try:
         payload = decode_access_token(credentials.credentials)
-    except Exception:
+    except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
